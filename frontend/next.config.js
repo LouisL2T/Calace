@@ -1,15 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: process.env.NETLIFY ? "standalone" : undefined,
   images: {
-    unoptimized: !!process.env.NETLIFY,
+    unoptimized: true,
   },
   async rewrites() {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    // Only used in local dev – on Netlify the redirect rules in netlify.toml handle this
+    if (process.env.NETLIFY) return [];
     return [
       {
         source: "/api/:path*",
-        destination: `${apiUrl}/api/:path*`,
+        destination: "http://localhost:8000/api/:path*",
       },
     ];
   },
