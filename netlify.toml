@@ -5,7 +5,31 @@
 
 [build.environment]
   NODE_VERSION = "20"
-  NEXT_PUBLIC_API_URL = ""
 
+# The Next.js runtime plugin handles all SSR routing, static pages,
+# ISR, and client-side navigation automatically.
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+# Proxy /api/* to the FastAPI backend.
+# Set BACKEND_URL in Netlify Dashboard > Site settings > Environment variables.
+# Example: BACKEND_URL = https://calace-api.railway.app
+# force = true ensures this takes priority over any plugin-generated rules.
+[[redirects]]
+  from = "/api/*"
+  to = ":BACKEND_URL/api/:splat"
+  status = 200
+  force = true
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+
+[[headers]]
+  for = "/_next/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
