@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authAPI } from "@/services/api";
 import { useAppStore } from "@/store";
+import { isDemoModeSync, forceDemoMode } from "@/lib/demo-mode";
 
 export default function AuthPage() {
   const router = useRouter();
@@ -17,6 +18,12 @@ export default function AuthPage() {
     full_name: "",
     tenant_name: "",
   });
+
+  const handleDemo = () => {
+    forceDemoMode();
+    setAuth("demo-tenant", "demo-user");
+    router.push("/onboarding");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,6 +59,23 @@ export default function AuthPage() {
         </div>
 
         <div className="bg-white rounded-2xl shadow-lg border border-surface-200 p-8">
+          {/* Demo Button */}
+          <button
+            onClick={handleDemo}
+            className="w-full py-3 mb-6 bg-gradient-to-r from-primary-500 to-primary-700 text-white rounded-xl hover:from-primary-600 hover:to-primary-800 transition-all font-medium text-lg shadow-md"
+          >
+            Demo starten (ohne Registrierung)
+          </button>
+
+          <div className="relative mb-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-surface-200" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-gray-400">oder</span>
+            </div>
+          </div>
+
           <div className="flex mb-6 bg-surface-50 rounded-lg p-1">
             <button
               onClick={() => setIsRegister(true)}
@@ -113,7 +137,7 @@ export default function AuthPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-2.5 bg-primary-600 text-white rounded-xl hover:bg-primary-700 disabled:opacity-50 transition-colors font-medium"
+              className="w-full py-2.5 bg-gray-800 text-white rounded-xl hover:bg-gray-900 disabled:opacity-50 transition-colors font-medium"
             >
               {loading ? "Bitte warten..." : isRegister ? "Konto erstellen" : "Anmelden"}
             </button>

@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { businessAPI } from "@/services/api";
+import { isDemoModeSync } from "@/lib/demo-mode";
+import { MOCK_INVOICES, MOCK_CUSTOMERS } from "@/lib/mock-data";
 import type { Invoice } from "@/types";
 import { FileText, Plus } from "lucide-react";
 
@@ -25,7 +27,11 @@ export default function InvoicingPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
 
   useEffect(() => {
-    loadInvoices();
+    if (isDemoModeSync()) {
+      setInvoices(MOCK_INVOICES);
+    } else {
+      loadInvoices();
+    }
   }, []);
 
   const loadInvoices = async () => {
@@ -34,6 +40,19 @@ export default function InvoicingPage() {
       setInvoices(data);
     } catch {}
   };
+
+  const getCustomerName = (customerId: string) => {
+    const c = MOCK_CUSTOMERS.find((c) => c.id === customerId);
+    return c ? `${c.first_name} ${c.last_name}` : customerId;
+  };
+
+  const totalRevenue = invoices
+    .filter((i) => i.status === "paid")
+    .reduce((sum, i) => sum + Number(i.total), 0);
+
+  const totalOpen = invoices
+    .filter((i) => i.status === "sent" || i.status === "draft")
+    .reduce((sum, i) => sum + Number(i.total), 0);
 
   return (
     <div>
@@ -48,11 +67,28 @@ export default function InvoicingPage() {
         </button>
       </div>
 
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="bg-white rounded-xl border border-surface-200 px-4 py-3">
+          <p className="text-xs text-gray-400">Umsatz (bezahlt)</p>
+          <p className="text-xl font-bold text-green-600">{totalRevenue.toFixed(2)} &euro;</p>
+        </div>
+        <div className="bg-white rounded-xl border border-surface-200 px-4 py-3">
+          <p className="text-xs text-gray-400">Offen</p>
+          <p className="text-xl font-bold text-amber-600">{totalOpen.toFixed(2)} &euro;</p>
+        </div>
+        <div className="bg-white rounded-xl border border-surface-200 px-4 py-3">
+          <p className="text-xs text-gray-400">Gesamt</p>
+          <p className="text-xl font-bold text-gray-900">{invoices.length}</p>
+        </div>
+      </div>
+
       <div className="bg-white rounded-xl border border-surface-200 overflow-hidden">
         <table className="w-full">
           <thead className="bg-surface-50">
             <tr>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Nr.</th>
+              <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Kunde</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Datum</th>
               <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Status</th>
               <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Netto</th>
@@ -64,6 +100,7 @@ export default function InvoicingPage() {
             {invoices.map((inv) => (
               <tr key={inv.id} className="border-t border-surface-100 hover:bg-surface-50 cursor-pointer">
                 <td className="px-4 py-3 text-sm font-medium">{inv.invoice_number}</td>
+                <td className="px-4 py-3 text-sm text-gray-600">{isDemoModeSync() ? getCustomerName(inv.customer_id) : inv.customer_id}</td>
                 <td className="px-4 py-3 text-sm text-gray-600">
                   {new Date(inv.issue_date).toLocaleDateString("de-DE")}
                 </td>
@@ -72,9 +109,9 @@ export default function InvoicingPage() {
                     {STATUS_LABELS[inv.status] || inv.status}
                   </span>
                 </td>
-                <td className="px-4 py-3 text-sm text-right">{Number(inv.subtotal).toFixed(2)} €</td>
-                <td className="px-4 py-3 text-sm text-right text-gray-500">{Number(inv.tax_amount).toFixed(2)} €</td>
-                <td className="px-4 py-3 text-sm text-right font-semibold">{Number(inv.total).toFixed(2)} €</td>
+                <td className="px-4 py-3 text-sm text-right">{Number(inv.subtotal).toFixed(2)} &euro;</td>
+                <td className="px-4 py-3 text-sm text-right text-gray-500">{Number(inv.tax_amount).toFixed(2)} &euro;</td>
+                <td className="px-4 py-3 text-sm text-right font-semibold">{Number(inv.total).toFixed(2)} &euro;</td>
               </tr>
             ))}
           </tbody>

@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Send, Bot, User, Sparkles } from "lucide-react";
 import { useAppStore } from "@/store";
 import { aiAPI, modulesAPI } from "@/services/api";
+import { isDemoModeSync } from "@/lib/demo-mode";
+import { getMockOnboardingResponse, getMockModuleExpansion, MOCK_MODULES } from "@/lib/mock-data";
 import type { ChatMessage } from "@/types";
 import ParticleBurst from "@/components/effects/ParticleBurst";
 
@@ -13,20 +15,24 @@ export default function OnboardingChat() {
   const [loading, setLoading] = useState(false);
   const [showParticles, setShowParticles] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { chatMessages, addChatMessage, setOnboardingComplete, setActiveModules, addModule } =
-    useAppStore();
+  const {
+    chatMessages,
+    addChatMessage,
+    setOnboardingComplete,
+    setActiveModules,
+    addModule,
+  } = useAppStore();
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatMessages]);
 
-  // Initial greeting
   useEffect(() => {
     if (chatMessages.length === 0) {
       addChatMessage({
         role: "assistant",
         content:
-          "Willkommen bei Calace! 👋\n\nIch bin Ihr KI-Assistent und helfe Ihnen, die App perfekt auf Ihre Branche einzurichten.\n\nErzählen Sie mir: **Was machen Sie beruflich?**\n\n_(z.B. \"Ich bin Dellendrücker\" oder \"Wir sind eine Lackiererei\")_",
+          "Willkommen bei **Calace**! 👋\n\nIch bin Ihr KI-Assistent und richte die App perfekt auf Ihre Branche ein.\n\n**Was machen Sie beruflich?**\n\n_(z.B. \"Ich bin Dellendrücker\", \"Wir sind eine Lackiererei\" oder \"KFZ-Werkstatt\")_",
       });
     }
   }, []);
@@ -39,25 +45,80 @@ export default function OnboardingChat() {
     addChatMessage({ role: "user", content: userMessage });
     setLoading(true);
 
+    // Small delay for realism in demo
+    await new Promise((r) => setTimeout(r, isDemoModeSync() ? 800 : 0));
+
     try {
-      const response = await aiAPI.onboarding(userMessage);
+      let reply: string;
+      let modulesActivated: string[] = [];
+      let onboardingComplete = false;
+      let moduleActivated = false;
+      let moduleName: string | undefined;
+
+      if (isDemoModeSync()) {
+        // --- DEMO MODE ---
+        const onboardingResult = getMockOnboardingResponse(userMessage);
+
+        if (onboardingResult.onboarding_complete) {
+          reply = onboardingResult.reply;
+          modulesActivated = onboardingResult.modules_activated;
+          onboardingComplete = true;
+          setActiveModules(MOCK_MODULES);
+        } else {
+          // Check if it's a module expansion request
+          const expansionKeywords = ["brauche", "tool", "modul", "funktion", "hätte gerne"];
+          const isExpansion = expansionKeywords.some((kw) => userMessage.toLowerCase().includes(kw));
+
+          if (isExpansion) {
+            const expansion = getMockModuleExpansion(userMessage);
+            reply = expansion.reply;
+            moduleActivated = expansion.module_activated;
+            moduleName = expansion.module_name;
+
+            if (expansion.module_activated) {
+              addModule({
+                slug: expansion.module_slug,
+                name: expansion.module_name,
+                description: null,
+                icon: "puzzle",
+                category: "custom",
+                component_path: expansion.component_path,
+                config: null,
+                is_builtin: false,
+              });
+            }
+          } else {
+            reply = onboardingResult.reply;
+          }
+        }
+      } else {
+        // --- LIVE API ---
+        const response = await aiAPI.onboarding(userMessage);
+        reply = response.reply;
+        modulesActivated = response.modules_activated;
+        onboardingComplete = response.onboarding_complete;
+
+        if (response.modules_activated.length > 0) {
+          const modules = await modulesAPI.getActive();
+          setActiveModules(modules);
+        }
+      }
+
       const msg: ChatMessage = {
         role: "assistant",
-        content: response.reply,
-        modules_activated: response.modules_activated,
+        content: reply,
+        modules_activated: modulesActivated.length > 0 ? modulesActivated : undefined,
+        module_activated: moduleActivated || undefined,
+        module_name: moduleName,
       };
       addChatMessage(msg);
 
-      if (response.modules_activated.length > 0) {
+      if (modulesActivated.length > 0 || moduleActivated) {
         setShowParticles(true);
         setTimeout(() => setShowParticles(false), 2000);
-
-        // Refresh active modules
-        const modules = await modulesAPI.getActive();
-        setActiveModules(modules);
       }
 
-      if (response.onboarding_complete) {
+      if (onboardingComplete) {
         setOnboardingComplete(true);
       }
     } catch {
@@ -70,48 +131,16 @@ export default function OnboardingChat() {
     }
   };
 
-  const handleModuleRequest = async (prompt: string) => {
-    setLoading(true);
-    addChatMessage({ role: "user", content: prompt });
-
-    try {
-      const response = await aiAPI.expandModule(prompt);
-      const msg: ChatMessage = {
-        role: "assistant",
-        content: response.reply,
-        module_activated: response.module_activated,
-        module_name: response.module_name ?? undefined,
-      };
-      addChatMessage(msg);
-
-      if (response.module_activated && response.module_slug) {
-        setShowParticles(true);
-        setTimeout(() => setShowParticles(false), 2000);
-
-        addModule({
-          slug: response.module_slug,
-          name: response.module_name || response.module_slug,
-          description: null,
-          icon: "puzzle",
-          category: "custom",
-          component_path: response.component_path || "",
-          config: null,
-          is_builtin: false,
-        });
-      }
-    } catch {
-      addChatMessage({
-        role: "assistant",
-        content: "Das Modul konnte nicht erstellt werden. Bitte versuchen Sie es erneut.",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="flex flex-col h-[calc(100vh-6rem)] max-w-3xl mx-auto">
       {showParticles && <ParticleBurst />}
+
+      {/* Demo Banner */}
+      {isDemoModeSync() && (
+        <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-2 mb-4 text-center text-sm text-amber-700">
+          Demo-Modus – Tipp: Schreibe <strong>&quot;Ich bin Dellendrücker&quot;</strong> zum Testen
+        </div>
+      )}
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto space-y-4 pb-4">
@@ -138,7 +167,6 @@ export default function OnboardingChat() {
               >
                 <p className="whitespace-pre-wrap text-sm leading-relaxed">{msg.content}</p>
 
-                {/* Show activated modules */}
                 {msg.modules_activated && msg.modules_activated.length > 0 && (
                   <div className="mt-3 pt-3 border-t border-primary-200">
                     <div className="flex items-center gap-1 text-xs font-medium text-primary-600 mb-2">

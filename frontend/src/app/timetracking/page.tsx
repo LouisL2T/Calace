@@ -2,6 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import { businessAPI } from "@/services/api";
+import { isDemoModeSync } from "@/lib/demo-mode";
+import { MOCK_TIME_ENTRIES } from "@/lib/mock-data";
 import type { TimeEntry } from "@/types";
 import { Play, Square, Clock } from "lucide-react";
 
@@ -13,7 +15,11 @@ export default function TimeTrackingPage() {
   const timerRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
-    loadEntries();
+    if (isDemoModeSync()) {
+      setEntries(MOCK_TIME_ENTRIES);
+    } else {
+      loadEntries();
+    }
   }, []);
 
   useEffect(() => {
@@ -38,6 +44,21 @@ export default function TimeTrackingPage() {
   };
 
   const startTimer = async () => {
+    if (isDemoModeSync()) {
+      const entry: TimeEntry = {
+        id: `demo-${Date.now()}`,
+        user_id: "u1",
+        project_id: null,
+        appointment_id: null,
+        description: description || null,
+        start_time: new Date().toISOString(),
+        end_time: null,
+        duration_seconds: null,
+      };
+      setActiveEntry(entry);
+      setDescription("");
+      return;
+    }
     try {
       const entry = await businessAPI.startTimer({ description: description || undefined });
       setActiveEntry(entry);
@@ -47,6 +68,18 @@ export default function TimeTrackingPage() {
 
   const stopTimer = async () => {
     if (!activeEntry) return;
+
+    if (isDemoModeSync()) {
+      const dur = Math.floor((Date.now() - new Date(activeEntry.start_time).getTime()) / 1000);
+      const stopped: TimeEntry = {
+        ...activeEntry,
+        end_time: new Date().toISOString(),
+        duration_seconds: dur,
+      };
+      setEntries((prev) => [stopped, ...prev]);
+      setActiveEntry(null);
+      return;
+    }
     try {
       await businessAPI.stopTimer(activeEntry.id);
       setActiveEntry(null);
@@ -61,13 +94,17 @@ export default function TimeTrackingPage() {
     return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
+  const totalToday = entries
+    .filter((e) => e.duration_seconds)
+    .reduce((sum, e) => sum + (e.duration_seconds || 0), 0);
+
   return (
     <div>
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Zeiterfassung</h1>
 
       {/* Timer */}
       <div className="bg-white rounded-2xl border border-surface-200 p-8 mb-8 text-center">
-        <div className="text-5xl font-mono font-bold text-gray-900 mb-6">
+        <div className="text-6xl font-mono font-bold text-gray-900 mb-6 tabular-nums">
           {formatDuration(elapsed)}
         </div>
 
@@ -78,6 +115,7 @@ export default function TimeTrackingPage() {
               onChange={(e) => setDescription(e.target.value)}
               placeholder="Was arbeiten Sie gerade? (optional)"
               className="w-full max-w-md mx-auto block px-4 py-2.5 border border-surface-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-300 text-center"
+              onKeyDown={(e) => e.key === "Enter" && startTimer()}
             />
             <button
               onClick={startTimer}
@@ -103,6 +141,18 @@ export default function TimeTrackingPage() {
         )}
       </div>
 
+      {/* Stats */}
+      <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="bg-white rounded-xl border border-surface-200 px-4 py-3">
+          <p className="text-xs text-gray-400">Gesamtzeit (Einträge)</p>
+          <p className="text-xl font-bold text-primary-600">{formatDuration(totalToday)}</p>
+        </div>
+        <div className="bg-white rounded-xl border border-surface-200 px-4 py-3">
+          <p className="text-xs text-gray-400">Einträge</p>
+          <p className="text-xl font-bold text-gray-900">{entries.filter((e) => e.end_time).length}</p>
+        </div>
+      </div>
+
       {/* History */}
       <h2 className="text-lg font-semibold text-gray-900 mb-4">Letzte Einträge</h2>
       <div className="space-y-2">
@@ -120,11 +170,14 @@ export default function TimeTrackingPage() {
                     {entry.description || "Ohne Beschreibung"}
                   </p>
                   <p className="text-xs text-gray-400">
-                    {new Date(entry.start_time).toLocaleDateString("de-DE")}
+                    {new Date(entry.start_time).toLocaleDateString("de-DE")}{" "}
+                    {new Date(entry.start_time).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
+                    {" – "}
+                    {new Date(entry.end_time!).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
                   </p>
                 </div>
               </div>
-              <span className="font-mono text-sm text-gray-600">
+              <span className="font-mono text-sm text-gray-600 tabular-nums">
                 {entry.duration_seconds ? formatDuration(entry.duration_seconds) : "--:--:--"}
               </span>
             </div>

@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { businessAPI } from "@/services/api";
+import { isDemoModeSync } from "@/lib/demo-mode";
+import { MOCK_MATERIALS } from "@/lib/mock-data";
 import type { MaterialItem } from "@/types";
 import { Package, Plus, AlertTriangle } from "lucide-react";
 
@@ -9,7 +11,11 @@ export default function MaterialsPage() {
   const [materials, setMaterials] = useState<MaterialItem[]>([]);
 
   useEffect(() => {
-    loadMaterials();
+    if (isDemoModeSync()) {
+      setMaterials(MOCK_MATERIALS);
+    } else {
+      loadMaterials();
+    }
   }, []);
 
   const loadMaterials = async () => {
@@ -18,6 +24,12 @@ export default function MaterialsPage() {
       setMaterials(data);
     } catch {}
   };
+
+  const lowStockCount = materials.filter((m) => m.quantity_in_stock <= m.min_stock_level).length;
+  const totalValue = materials.reduce(
+    (sum, m) => sum + m.quantity_in_stock * (m.unit_price || 0),
+    0
+  );
 
   return (
     <div>
@@ -32,15 +44,31 @@ export default function MaterialsPage() {
         </button>
       </div>
 
+      {/* Stats */}
+      <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="bg-white rounded-xl border border-surface-200 px-4 py-3">
+          <p className="text-xs text-gray-400">Gesamtwert</p>
+          <p className="text-xl font-bold text-primary-600">{totalValue.toFixed(2)} &euro;</p>
+        </div>
+        <div className="bg-white rounded-xl border border-surface-200 px-4 py-3">
+          <p className="text-xs text-gray-400">Artikel</p>
+          <p className="text-xl font-bold text-gray-900">{materials.length}</p>
+        </div>
+        <div className={`bg-white rounded-xl border px-4 py-3 ${lowStockCount > 0 ? "border-red-200" : "border-surface-200"}`}>
+          <p className="text-xs text-gray-400">Niedrig im Bestand</p>
+          <p className={`text-xl font-bold ${lowStockCount > 0 ? "text-red-600" : "text-green-600"}`}>
+            {lowStockCount}
+          </p>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {materials.map((item) => {
           const isLow = item.quantity_in_stock <= item.min_stock_level;
           return (
             <div
               key={item.id}
-              className={`bg-white rounded-xl border p-4 ${
-                isLow ? "border-red-200" : "border-surface-200"
-              }`}
+              className={`bg-white rounded-xl border p-4 ${isLow ? "border-red-200" : "border-surface-200"}`}
             >
               <div className="flex items-start justify-between mb-3">
                 <div>
@@ -57,19 +85,33 @@ export default function MaterialsPage() {
                 )}
               </div>
 
+              {item.description && (
+                <p className="text-xs text-gray-500 mb-3">{item.description}</p>
+              )}
+
               <div className="flex items-end justify-between">
                 <div>
                   <span className="text-2xl font-bold text-gray-900">{item.quantity_in_stock}</span>
                   <span className="text-sm text-gray-400 ml-1">{item.unit}</span>
                 </div>
                 {item.unit_price && (
-                  <span className="text-sm text-gray-500">{Number(item.unit_price).toFixed(2)} €/{item.unit}</span>
+                  <span className="text-sm text-gray-500">{Number(item.unit_price).toFixed(2)} &euro;/{item.unit}</span>
                 )}
               </div>
 
               {item.sku && (
                 <p className="text-xs text-gray-400 mt-2">SKU: {item.sku}</p>
               )}
+
+              {/* Stock bar */}
+              <div className="mt-3">
+                <div className="w-full h-1.5 bg-surface-100 rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${isLow ? "bg-red-400" : "bg-green-400"}`}
+                    style={{ width: `${Math.min((item.quantity_in_stock / Math.max(item.min_stock_level * 3, 1)) * 100, 100)}%` }}
+                  />
+                </div>
+              </div>
             </div>
           );
         })}

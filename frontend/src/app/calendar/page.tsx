@@ -2,17 +2,13 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { calendarAPI } from "@/services/api";
+import { isDemoModeSync } from "@/lib/demo-mode";
+import { MOCK_APPOINTMENTS } from "@/lib/mock-data";
 import type { Appointment } from "@/types";
 import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
 
-interface CalendarEvent {
-  appointment: Appointment;
-  top: number;
-  height: number;
-}
-
-const HOURS = Array.from({ length: 14 }, (_, i) => i + 7); // 07:00 - 20:00
-const HOUR_HEIGHT = 60; // px per hour
+const HOURS = Array.from({ length: 14 }, (_, i) => i + 7);
+const HOUR_HEIGHT = 60;
 
 export default function CalendarPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -21,6 +17,20 @@ export default function CalendarPage() {
   const [dragState, setDragState] = useState<{ id: string; startY: number; origTop: number } | null>(null);
 
   const loadAppointments = useCallback(async () => {
+    if (isDemoModeSync()) {
+      // Filter mock appointments for current day
+      const dayStart = new Date(currentDate);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(currentDate);
+      dayEnd.setHours(23, 59, 59, 999);
+      setAppointments(
+        MOCK_APPOINTMENTS.filter((a) => {
+          const start = new Date(a.start_time);
+          return start >= dayStart && start <= dayEnd;
+        })
+      );
+      return;
+    }
     try {
       const start = new Date(currentDate);
       start.setHours(0, 0, 0, 0);
@@ -31,16 +41,14 @@ export default function CalendarPage() {
         end: end.toISOString(),
       });
       setAppointments(data);
-    } catch {
-      // API not connected yet
-    }
+    } catch {}
   }, [currentDate]);
 
   useEffect(() => {
     loadAppointments();
   }, [loadAppointments]);
 
-  const getEventPosition = (apt: Appointment): CalendarEvent => {
+  const getEventPosition = (apt: Appointment) => {
     const start = new Date(apt.start_time);
     const end = new Date(apt.end_time);
     const startHour = start.getHours() + start.getMinutes() / 60;
@@ -68,7 +76,6 @@ export default function CalendarPage() {
       if (!dragState) return;
       const deltaY = e.clientY - dragState.startY;
       const newTop = dragState.origTop + deltaY;
-      // Visual feedback via CSS transform (handled in render)
       setDragState((prev) => prev ? { ...prev, startY: e.clientY, origTop: newTop } : null);
     },
     [dragState]
@@ -87,11 +94,20 @@ export default function CalendarPage() {
       newStart.setHours(Math.floor(newStartHour), (newStartHour % 1) * 60, 0, 0);
       const newEnd = new Date(newStart.getTime() + durationMs);
 
-      try {
-        await calendarAPI.move(apt.id, newStart.toISOString(), newEnd.toISOString());
-        loadAppointments();
-      } catch {
-        // Revert
+      if (isDemoModeSync()) {
+        // Update in local state for demo
+        setAppointments((prev) =>
+          prev.map((a) =>
+            a.id === apt.id
+              ? { ...a, start_time: newStart.toISOString(), end_time: newEnd.toISOString() }
+              : a
+          )
+        );
+      } else {
+        try {
+          await calendarAPI.move(apt.id, newStart.toISOString(), newEnd.toISOString());
+          loadAppointments();
+        } catch {}
       }
     }
     setDragState(null);
@@ -114,6 +130,14 @@ export default function CalendarPage() {
     month: "long",
     day: "numeric",
   });
+
+  const statusColors: Record<string, string> = {
+    scheduled: "bg-blue-100 text-blue-700",
+    confirmed: "bg-green-100 text-green-700",
+    in_progress: "bg-amber-100 text-amber-700",
+    completed: "bg-gray-100 text-gray-500",
+    cancelled: "bg-red-100 text-red-600",
+  };
 
   return (
     <div>
@@ -148,10 +172,24 @@ export default function CalendarPage() {
         </div>
       </div>
 
+      {/* Stats bar */}
+      <div className="grid grid-cols-4 gap-4 mb-6">
+        {[
+          { label: "Heute", value: appointments.length, color: "text-primary-600" },
+          { label: "Bestätigt", value: appointments.filter((a) => a.status === "confirmed").length, color: "text-green-600" },
+          { label: "In Arbeit", value: appointments.filter((a) => a.status === "in_progress").length, color: "text-amber-600" },
+          { label: "Offen", value: appointments.filter((a) => a.status === "scheduled").length, color: "text-blue-600" },
+        ].map((stat) => (
+          <div key={stat.label} className="bg-white rounded-xl border border-surface-200 px-4 py-3">
+            <p className="text-xs text-gray-400">{stat.label}</p>
+            <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
+          </div>
+        ))}
+      </div>
+
       {/* Day View */}
       <div className="bg-white rounded-xl border border-surface-200 overflow-hidden">
         <div className="relative" style={{ height: HOURS.length * HOUR_HEIGHT }}>
-          {/* Hour lines */}
           {HOURS.map((hour) => (
             <div
               key={hour}
@@ -184,36 +222,40 @@ export default function CalendarPage() {
                   }}
                   onMouseDown={(e) => handleDragStart(e, apt.id, pos.top)}
                 >
-                  <p className="text-white text-sm font-medium truncate">{apt.title}</p>
+                  <div className="flex items-center justify-between">
+                    <p className="text-white text-sm font-medium truncate">{apt.title}</p>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${statusColors[apt.status] || ""}`}>
+                      {apt.status}
+                    </span>
+                  </div>
                   <p className="text-white/80 text-xs">
-                    {new Date(apt.start_time).toLocaleTimeString("de-DE", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}{" "}
-                    -{" "}
-                    {new Date(apt.end_time).toLocaleTimeString("de-DE", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
+                    {new Date(apt.start_time).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
+                    {" – "}
+                    {new Date(apt.end_time).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
                   </p>
+                  {apt.description && pos.height > 50 && (
+                    <p className="text-white/60 text-xs mt-0.5 truncate">{apt.description}</p>
+                  )}
                 </div>
               );
             })}
           </div>
 
-          {/* Current time indicator */}
           <CurrentTimeLine />
         </div>
       </div>
 
-      {/* Create Modal (simplified) */}
       {showCreateModal && (
         <CreateAppointmentModal
           date={currentDate}
           onClose={() => setShowCreateModal(false)}
-          onCreated={() => {
+          onCreated={(apt) => {
             setShowCreateModal(false);
-            loadAppointments();
+            if (isDemoModeSync()) {
+              setAppointments((prev) => [...prev, apt]);
+            } else {
+              loadAppointments();
+            }
           }}
         />
       )}
@@ -252,7 +294,7 @@ function CreateAppointmentModal({
 }: {
   date: Date;
   onClose: () => void;
-  onCreated: () => void;
+  onCreated: (apt: Appointment) => void;
 }) {
   const [title, setTitle] = useState("");
   const [startTime, setStartTime] = useState("09:00");
@@ -271,28 +313,41 @@ function CreateAppointmentModal({
     const [eh, em] = endTime.split(":").map(Number);
     end.setHours(eh, em, 0, 0);
 
-    try {
-      await calendarAPI.create({
+    if (isDemoModeSync()) {
+      const newApt: Appointment = {
+        id: `demo-${Date.now()}`,
+        tenant_id: "t1",
         title,
+        description: null,
+        customer_id: null,
+        assigned_to: null,
+        project_id: null,
         start_time: start.toISOString(),
         end_time: end.toISOString(),
-      });
-      onCreated();
-    } catch {
-      // Handle error
-    } finally {
-      setLoading(false);
+        color: "#4c6ef5",
+        status: "scheduled",
+        metadata: null,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      onCreated(newApt);
+    } else {
+      try {
+        const apt = await calendarAPI.create({
+          title,
+          start_time: start.toISOString(),
+          end_time: end.toISOString(),
+        });
+        onCreated(apt);
+      } catch {}
     }
+    setLoading(false);
   };
 
   return (
     <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50" onClick={onClose}>
-      <div
-        className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-lg font-semibold mb-4">Neuer Termin</h2>
-
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Titel</label>
@@ -300,10 +355,10 @@ function CreateAppointmentModal({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               className="w-full px-3 py-2 border border-surface-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300"
-              placeholder="z.B. Fahrzeug-Inspektion"
+              placeholder="z.B. Hagelschaden – BMW 3er"
+              autoFocus
             />
           </div>
-
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Von</label>
@@ -325,12 +380,8 @@ function CreateAppointmentModal({
             </div>
           </div>
         </div>
-
         <div className="flex justify-end gap-3 mt-6">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 text-gray-600 hover:bg-surface-100 rounded-lg transition-colors"
-          >
+          <button onClick={onClose} className="px-4 py-2 text-gray-600 hover:bg-surface-100 rounded-lg transition-colors">
             Abbrechen
           </button>
           <button
