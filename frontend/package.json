@@ -1,0 +1,40 @@
+{
+  "name": "calace-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "next": "^14.2.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "@fullcalendar/core": "^6.1.15",
+    "@fullcalendar/daygrid": "^6.1.15",
+    "@fullcalendar/timegrid": "^6.1.15",
+    "@fullcalendar/interaction": "^6.1.15",
+    "@fullcalendar/react": "^6.1.15",
+    "zustand": "^4.5.4",
+    "axios": "^1.7.2",
+    "framer-motion": "^11.3.8",
+    "tsparticles": "^3.5.0",
+    "@tsparticles/react": "^3.0.0",
+    "@tsparticles/slim": "^3.5.0",
+    "lucide-react": "^0.411.0",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.4.0"
+  },
+  "devDependencies": {
+    "@netlify/plugin-nextjs": "^4.41.3",
+    "@types/node": "^20.14.12",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.39",
+    "tailwindcss": "^3.4.6",
+    "typescript": "^5.5.4"
+  }
+}

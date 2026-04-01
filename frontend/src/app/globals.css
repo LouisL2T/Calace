@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg-primary: #f8f9fa;
+  --bg-card: #ffffff;
+  --text-primary: #1a1a2e;
+  --text-secondary: #6c757d;
+  --accent: #4c6ef5;
+}
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: system-ui, -apple-system, sans-serif;
+}
+
+/* Module expansion particle burst */
+.particle-container {
+  position: fixed;
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Smooth calendar transitions */
+.fc .fc-event {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: grab;
+}
+
+.fc .fc-event:hover {
+  transform: scale(1.02);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.fc .fc-event:active {
+  cursor: grabbing;
+}
