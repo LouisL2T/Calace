@@ -17,6 +17,10 @@ export interface Appointment {
   project_id: string | null;
   start_time: string;
   end_time: string;
+  start_date: string;
+  end_date: string;
+  sachverstaendiger: string | null;
+  ansprechpartner: string | null;
   color: string | null;
   status: "scheduled" | "confirmed" | "in_progress" | "completed" | "cancelled" | "no_show";
   metadata: Record<string, unknown> | null;

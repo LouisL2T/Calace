@@ -1,0 +1,23 @@
+{
+  "summary": "Completed comprehensive frontend testing of calendar appointment scheduling with new German fields (Sachverständiger, Ansprechpartner, date ranges). All requested features working correctly in demo mode.",
+  "backend_issues": {},
+  "frontend_issues": {},
+  "passed_tests": [
+    "Demo flow: Onboarding → 'Ich bin Dellendrücker' → Calendar access works",
+    "New appointment modal opens with 'Neuer Termin' button",
+    "Date range fields (Datum Von/Datum Bis) positioned at top in highlighted section",
+    "Zuständiger Sachverständiger field present with correct label and placeholder",
+    "Ansprechpartner field present with correct label and placeholder",
+    "Appointment creation with all new fields successful",
+    "Calendar displays Sachverständiger and Ansprechpartner info on appointments",
+    "Calendar shows date range (07.04 – 09.04) when start_date differs from end_date",
+    "Mock data integration working correctly",
+    "UI responsiveness and field positioning correct"
+  ],
+  "test_report_links": [],
+  "action_item_for_main_agent": "",
+  "updated_files": [],
+  "success_percentage": "frontend: 100%",
+  "should_call_test_agent_after_fix": "false",
+  "should_main_agent_test_itself": "true"
+}

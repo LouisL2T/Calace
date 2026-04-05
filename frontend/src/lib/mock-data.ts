@@ -12,6 +12,12 @@ const d = (daysOffset: number, hour: number, minute = 0) => {
   return date.toISOString();
 };
 
+const dateStr = (daysOffset: number) => {
+  const date = new Date(today);
+  date.setDate(date.getDate() + daysOffset);
+  return date.toISOString().split("T")[0];
+};
+
 export const MOCK_APPOINTMENTS: Appointment[] = [
   {
     id: "a1",
@@ -23,6 +29,10 @@ export const MOCK_APPOINTMENTS: Appointment[] = [
     project_id: null,
     start_time: d(0, 8, 0),
     end_time: d(0, 10, 30),
+    start_date: dateStr(0),
+    end_date: dateStr(1),
+    sachverstaendiger: "Thomas Schmidt",
+    ansprechpartner: "Autohaus Müller GmbH",
     color: "#4c6ef5",
     status: "confirmed",
     metadata: { damage_type: "Hagel", damage_count: 40 },
@@ -39,6 +49,10 @@ export const MOCK_APPOINTMENTS: Appointment[] = [
     project_id: null,
     start_time: d(0, 11, 0),
     end_time: d(0, 12, 0),
+    start_date: dateStr(0),
+    end_date: dateStr(0),
+    sachverstaendiger: "Max Weber",
+    ansprechpartner: "Privatkunde",
     color: "#51cf66",
     status: "scheduled",
     metadata: { damage_type: "Parkdelle" },
@@ -55,6 +69,10 @@ export const MOCK_APPOINTMENTS: Appointment[] = [
     project_id: null,
     start_time: d(0, 13, 0),
     end_time: d(0, 16, 30),
+    start_date: dateStr(0),
+    end_date: dateStr(3),
+    sachverstaendiger: "Klaus Hoffmann",
+    ansprechpartner: "Mercedes Zentrum Stuttgart",
     color: "#ff6b6b",
     status: "in_progress",
     metadata: { damage_type: "Hagel", insurance: true },
@@ -71,6 +89,10 @@ export const MOCK_APPOINTMENTS: Appointment[] = [
     project_id: null,
     start_time: d(1, 9, 0),
     end_time: d(1, 9, 45),
+    start_date: dateStr(1),
+    end_date: dateStr(1),
+    sachverstaendiger: "Thomas Schmidt",
+    ansprechpartner: "VW Autohaus Stern",
     color: "#fcc419",
     status: "scheduled",
     metadata: null,
@@ -87,6 +109,10 @@ export const MOCK_APPOINTMENTS: Appointment[] = [
     project_id: null,
     start_time: d(1, 14, 0),
     end_time: d(1, 14, 30),
+    start_date: dateStr(1),
+    end_date: dateStr(1),
+    sachverstaendiger: "Max Weber",
+    ansprechpartner: "Porsche Zentrum Stuttgart",
     color: "#845ef7",
     status: "scheduled",
     metadata: null,

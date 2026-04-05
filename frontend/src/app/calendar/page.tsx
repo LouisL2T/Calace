@@ -228,12 +228,26 @@ export default function CalendarPage() {
                       {apt.status}
                     </span>
                   </div>
+                  {/* Sachverständiger & Ansprechpartner */}
+                  {(apt.sachverstaendiger || apt.ansprechpartner) && pos.height > 40 && (
+                    <div className="text-white/90 text-xs mt-0.5">
+                      {apt.sachverstaendiger && <span className="font-medium">{apt.sachverstaendiger}</span>}
+                      {apt.sachverstaendiger && apt.ansprechpartner && <span className="mx-1">•</span>}
+                      {apt.ansprechpartner && <span>{apt.ansprechpartner}</span>}
+                    </div>
+                  )}
+                  {/* Datum-Bereich */}
+                  {apt.start_date && apt.end_date && apt.start_date !== apt.end_date && pos.height > 55 && (
+                    <p className="text-white/70 text-[10px] mt-0.5">
+                      {new Date(apt.start_date).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })} – {new Date(apt.end_date).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" })}
+                    </p>
+                  )}
                   <p className="text-white/80 text-xs">
                     {new Date(apt.start_time).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
                     {" – "}
                     {new Date(apt.end_time).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}
                   </p>
-                  {apt.description && pos.height > 50 && (
+                  {apt.description && pos.height > 70 && (
                     <p className="text-white/60 text-xs mt-0.5 truncate">{apt.description}</p>
                   )}
                 </div>
@@ -297,6 +311,10 @@ function CreateAppointmentModal({
   onCreated: (apt: Appointment) => void;
 }) {
   const [title, setTitle] = useState("");
+  const [startDate, setStartDate] = useState(date.toISOString().split("T")[0]);
+  const [endDate, setEndDate] = useState(date.toISOString().split("T")[0]);
+  const [sachverstaendiger, setSachverstaendiger] = useState("");
+  const [ansprechpartner, setAnsprechpartner] = useState("");
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("10:00");
   const [loading, setLoading] = useState(false);
@@ -305,11 +323,11 @@ function CreateAppointmentModal({
     if (!title.trim()) return;
     setLoading(true);
 
-    const start = new Date(date);
+    const start = new Date(startDate);
     const [sh, sm] = startTime.split(":").map(Number);
     start.setHours(sh, sm, 0, 0);
 
-    const end = new Date(date);
+    const end = new Date(endDate);
     const [eh, em] = endTime.split(":").map(Number);
     end.setHours(eh, em, 0, 0);
 
@@ -324,6 +342,10 @@ function CreateAppointmentModal({
         project_id: null,
         start_time: start.toISOString(),
         end_time: end.toISOString(),
+        start_date: startDate,
+        end_date: endDate,
+        sachverstaendiger: sachverstaendiger || null,
+        ansprechpartner: ansprechpartner || null,
         color: "#4c6ef5",
         status: "scheduled",
         metadata: null,
@@ -337,6 +359,10 @@ function CreateAppointmentModal({
           title,
           start_time: start.toISOString(),
           end_time: end.toISOString(),
+          start_date: startDate,
+          end_date: endDate,
+          sachverstaendiger: sachverstaendiger || null,
+          ansprechpartner: ansprechpartner || null,
         });
         onCreated(apt);
       } catch {}
@@ -346,9 +372,58 @@ function CreateAppointmentModal({
 
   return (
     <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-xl" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-2xl p-6 w-full max-w-lg shadow-xl" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-lg font-semibold mb-4">Neuer Termin</h2>
         <div className="space-y-4">
+          {/* Datum Von/Bis - ON TOP */}
+          <div className="grid grid-cols-2 gap-4 p-4 bg-primary-50 rounded-xl border border-primary-100">
+            <div>
+              <label className="block text-sm font-medium text-primary-700 mb-1">Datum Von</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full px-3 py-2 border border-primary-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300 bg-white"
+                data-testid="start-date-input"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-primary-700 mb-1">Datum Bis</label>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full px-3 py-2 border border-primary-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300 bg-white"
+                data-testid="end-date-input"
+              />
+            </div>
+          </div>
+
+          {/* Zuständiger Sachverständiger */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Zuständiger Sachverständiger</label>
+            <input
+              value={sachverstaendiger}
+              onChange={(e) => setSachverstaendiger(e.target.value)}
+              className="w-full px-3 py-2 border border-surface-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300"
+              placeholder="z.B. Max Mustermann"
+              data-testid="sachverstaendiger-input"
+            />
+          </div>
+
+          {/* Ansprechpartner */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Ansprechpartner (z.B. Autohaus)</label>
+            <input
+              value={ansprechpartner}
+              onChange={(e) => setAnsprechpartner(e.target.value)}
+              className="w-full px-3 py-2 border border-surface-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300"
+              placeholder="z.B. Autohaus Schmidt"
+              data-testid="ansprechpartner-input"
+            />
+          </div>
+
+          {/* Titel */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Titel</label>
             <input
@@ -357,37 +432,43 @@ function CreateAppointmentModal({
               className="w-full px-3 py-2 border border-surface-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300"
               placeholder="z.B. Hagelschaden – BMW 3er"
               autoFocus
+              data-testid="title-input"
             />
           </div>
+
+          {/* Uhrzeit */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Von</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Uhrzeit Von</label>
               <input
                 type="time"
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
                 className="w-full px-3 py-2 border border-surface-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300"
+                data-testid="start-time-input"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Bis</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Uhrzeit Bis</label>
               <input
                 type="time"
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
                 className="w-full px-3 py-2 border border-surface-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300"
+                data-testid="end-time-input"
               />
             </div>
           </div>
         </div>
         <div className="flex justify-end gap-3 mt-6">
-          <button onClick={onClose} className="px-4 py-2 text-gray-600 hover:bg-surface-100 rounded-lg transition-colors">
+          <button onClick={onClose} className="px-4 py-2 text-gray-600 hover:bg-surface-100 rounded-lg transition-colors" data-testid="cancel-btn">
             Abbrechen
           </button>
           <button
             onClick={handleCreate}
             disabled={loading || !title.trim()}
             className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 disabled:opacity-50 transition-colors"
+            data-testid="create-appointment-btn"
           >
             {loading ? "Erstelle..." : "Termin erstellen"}
           </button>
