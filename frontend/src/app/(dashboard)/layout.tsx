@@ -10,9 +10,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <div className="min-h-screen">
       <Sidebar />
       <main
-        className={`transition-all duration-300 ${
-          sidebarOpen ? "ml-64" : "ml-16"
-        } p-6`}
+        className={`transition-all duration-300 pt-14 md:pt-0 ${
+          sidebarOpen ? "md:ml-64" : "md:ml-16"
+        } p-4 md:p-6`}
       >
         {children}
       </main>
