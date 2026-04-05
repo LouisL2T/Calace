@@ -9,3 +9,7 @@ __pycache__/
 dist/
 *.egg-info/
 .netlify/
+-e 
+# Environment files
+*.env
+*.env.*
