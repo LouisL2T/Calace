@@ -315,8 +315,6 @@ function CreateAppointmentModal({
   const [endDate, setEndDate] = useState(date.toISOString().split("T")[0]);
   const [sachverstaendiger, setSachverstaendiger] = useState("");
   const [ansprechpartner, setAnsprechpartner] = useState("");
-  const [startTime, setStartTime] = useState("09:00");
-  const [endTime, setEndTime] = useState("10:00");
   const [loading, setLoading] = useState(false);
 
   const handleCreate = async () => {
@@ -324,12 +322,10 @@ function CreateAppointmentModal({
     setLoading(true);
 
     const start = new Date(startDate);
-    const [sh, sm] = startTime.split(":").map(Number);
-    start.setHours(sh, sm, 0, 0);
+    start.setHours(8, 0, 0, 0);
 
     const end = new Date(endDate);
-    const [eh, em] = endTime.split(":").map(Number);
-    end.setHours(eh, em, 0, 0);
+    end.setHours(17, 0, 0, 0);
 
     if (isDemoModeSync()) {
       const newApt: Appointment = {
@@ -434,30 +430,6 @@ function CreateAppointmentModal({
               autoFocus
               data-testid="title-input"
             />
-          </div>
-
-          {/* Uhrzeit */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Uhrzeit Von</label>
-              <input
-                type="time"
-                value={startTime}
-                onChange={(e) => setStartTime(e.target.value)}
-                className="w-full px-3 py-2 border border-surface-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300"
-                data-testid="start-time-input"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Uhrzeit Bis</label>
-              <input
-                type="time"
-                value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
-                className="w-full px-3 py-2 border border-surface-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-300"
-                data-testid="end-time-input"
-              />
-            </div>
           </div>
         </div>
         <div className="flex justify-end gap-3 mt-6">
