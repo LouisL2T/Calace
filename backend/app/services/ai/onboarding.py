@@ -120,18 +120,29 @@ async def process_onboarding_message(
         if msg.role != "system":
             messages.append({"role": msg.role, "content": msg.content})
 
-    # Call AI (Anthropic)
     import anthropic
-
-    client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
-    response = await client.messages.create(
-        model=settings.AI_MODEL,
-        max_tokens=1024,
-        system=ONBOARDING_SYSTEM_PROMPT,
-        messages=[{"role": m["role"], "content": m["content"]} for m in messages if m["role"] != "system"],
-    )
-
-    reply_text = response.content[0].text
+    
+    if settings.ANTHROPIC_API_KEY and settings.ANTHROPIC_API_KEY.startswith("sk-ant") and not settings.ANTHROPIC_API_KEY.endswith("..."):
+        client = anthropic.AsyncAnthropic(api_key=settings.ANTHROPIC_API_KEY)
+        response = await client.messages.create(
+            model=settings.AI_MODEL,
+            max_tokens=1024,
+            system=ONBOARDING_SYSTEM_PROMPT,
+            messages=[{"role": m["role"], "content": m["content"]} for m in messages if m["role"] != "system"],
+        )
+    
+        reply_text = response.content[0].text
+    else:
+        # MOCK RESPONSE FOR DEMO
+        industry_detect = "handwerk"
+        if "dellen" in message.lower():
+            industry_detect = "dellendruecker"
+        elif "lackierer" in message.lower():
+            industry_detect = "lackierer"
+        elif "werkstatt" in message.lower():
+            industry_detect = "werkstatt"
+            
+        reply_text = f"Hallo! Ich habe Ihre Branche als **{industry_detect}** erkannt und die passenden Module für Sie konfiguriert.\n\n```json\n{{\"industry\": \"{industry_detect}\", \"modules\": [], \"complete\": true}}\n```"
 
     # Save assistant message
     assistant_msg = AIMessage(

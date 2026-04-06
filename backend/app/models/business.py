@@ -2,8 +2,7 @@ import uuid
 from datetime import datetime, timezone
 from decimal import Decimal
 
-from sqlalchemy import String, ForeignKey, DateTime, Text, Integer, Numeric, Enum as SAEnum
-from sqlalchemy.dialects.postgresql import UUID, JSONB
+from sqlalchemy import String, ForeignKey, DateTime, Text, Integer, Numeric, Enum as SAEnum, JSON, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 import enum
 
@@ -14,7 +13,7 @@ class TimeEntry(Base):
     """Project-based time tracking with start/stop."""
     __tablename__ = "time_entries"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tenants.id"), index=True)
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
     project_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("projects.id"), nullable=True)
@@ -40,7 +39,7 @@ class Invoice(Base):
     """Auto-generated invoices from calendar appointments."""
     __tablename__ = "invoices"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tenants.id"), index=True)
     customer_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("customers.id"))
     appointment_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("appointments.id"), nullable=True)
@@ -56,7 +55,7 @@ class Invoice(Base):
     total: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=0)
 
     notes: Mapped[str | None] = mapped_column(Text, nullable=True)
-    metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    meta_data: Mapped[dict | None] = mapped_column("metadata", JSON, nullable=True)
 
     items = relationship("InvoiceItem", back_populates="invoice", cascade="all, delete-orphan")
 
@@ -64,7 +63,7 @@ class Invoice(Base):
 class InvoiceItem(Base):
     __tablename__ = "invoice_items"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     invoice_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("invoices.id"))
     description: Mapped[str] = mapped_column(String(500))
     quantity: Mapped[Decimal] = mapped_column(Numeric(10, 2), default=1)
@@ -78,7 +77,7 @@ class MaterialItem(Base):
     """Simple inventory/material tracking."""
     __tablename__ = "material_items"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tenants.id"), index=True)
     name: Mapped[str] = mapped_column(String(255))
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -88,4 +87,5 @@ class MaterialItem(Base):
     unit: Mapped[str] = mapped_column(String(50), default="Stück")
     unit_price: Mapped[Decimal | None] = mapped_column(Numeric(10, 2), nullable=True)
     category: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    metadata: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    meta_data: Mapped[dict | None] = mapped_column("metadata", JSON, nullable=True)
+

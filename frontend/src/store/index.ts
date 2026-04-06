@@ -45,8 +45,15 @@ export const useAppStore = create<AppState>((set) => ({
     set({ isAuthenticated: false, tenantId: null, userId: null });
   },
 
-  onboardingComplete: false,
-  setOnboardingComplete: (complete) => set({ onboardingComplete: complete }),
+  onboardingComplete: typeof window !== "undefined" && localStorage.getItem("calace_onboarding_complete") === "true",
+  setOnboardingComplete: (complete) => {
+    if (complete) {
+      localStorage.setItem("calace_onboarding_complete", "true");
+    } else {
+      localStorage.removeItem("calace_onboarding_complete");
+    }
+    set({ onboardingComplete: complete });
+  },
 
   activeModules: [],
   setActiveModules: (modules) => set({ activeModules: modules }),
@@ -56,9 +63,18 @@ export const useAppStore = create<AppState>((set) => ({
       expandingModule: module.slug,
     })),
 
-  chatMessages: [],
-  addChatMessage: (msg) => set((state) => ({ chatMessages: [...state.chatMessages, msg] })),
-  clearChat: () => set({ chatMessages: [] }),
+  chatMessages: typeof window !== "undefined" && localStorage.getItem("calace_chat_history") 
+    ? JSON.parse(localStorage.getItem("calace_chat_history")!) 
+    : [],
+  addChatMessage: (msg) => set((state) => {
+    const newMessages = [...state.chatMessages, msg];
+    localStorage.setItem("calace_chat_history", JSON.stringify(newMessages));
+    return { chatMessages: newMessages };
+  }),
+  clearChat: () => {
+    localStorage.removeItem("calace_chat_history");
+    set({ chatMessages: [] });
+  },
 
   sidebarOpen: true,
   toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),

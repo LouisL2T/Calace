@@ -14,10 +14,12 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
+  ClipboardList,
 } from "lucide-react";
 
 const ICON_MAP: Record<string, React.ReactNode> = {
   calendar: <Calendar size={20} />,
+  orders: <ClipboardList size={20} />,
   crm: <Users size={20} />,
   time_tracking: <Clock size={20} />,
   invoicing: <FileText size={20} />,
@@ -28,6 +30,7 @@ const ICON_MAP: Record<string, React.ReactNode> = {
 
 const BUILTIN_NAV = [
   { slug: "calendar", name: "Kalender", href: "/calendar", icon: "calendar" },
+  { slug: "orders", name: "Aufträge", href: "/orders", icon: "orders" },
   { slug: "crm", name: "Kunden", href: "/crm", icon: "crm" },
   { slug: "time_tracking", name: "Zeiterfassung", href: "/timetracking", icon: "time_tracking" },
   { slug: "invoicing", name: "Rechnungen", href: "/invoicing", icon: "invoicing" },

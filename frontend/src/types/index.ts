@@ -7,6 +7,8 @@ export interface AuthTokens {
 }
 
 // Calendar
+export type AppointmentStatus = "scheduled" | "confirmed" | "in_progress" | "completed" | "cancelled" | "no_show";
+
 export interface Appointment {
   id: string;
   tenant_id: string;
@@ -15,19 +17,28 @@ export interface Appointment {
   customer_id: string | null;
   assigned_to: string | null;
   project_id: string | null;
+  vehicle_id: string | null;
+  location_id: string | null;
+  contact_person_id: string | null;
   start_time: string;
   end_time: string;
+  is_multi_day: boolean;
+  order_number: string | null;
   color: string | null;
-  status: "scheduled" | "confirmed" | "in_progress" | "completed" | "cancelled" | "no_show";
+  status: AppointmentStatus;
   metadata: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
 }
 
 // CRM
+export type CustomerType = "company" | "individual";
+
 export interface Customer {
   id: string;
   tenant_id: string;
+  customer_type: CustomerType;
+  company_name: string | null;
   first_name: string;
   last_name: string;
   email: string | null;
@@ -35,6 +46,36 @@ export interface Customer {
   company: string | null;
   address: string | null;
   custom_fields: Record<string, unknown> | null;
+  created_at: string;
+}
+
+export interface Location {
+  id: string;
+  customer_id: string;
+  name: string;
+  street: string | null;
+  zip_code: string | null;
+  city: string | null;
+  phone: string | null;
+  email: string | null;
+  notes: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  contact_persons: ContactPerson[];
+  created_at: string;
+}
+
+export interface ContactPerson {
+  id: string;
+  location_id: string;
+  first_name: string;
+  last_name: string;
+  role: string | null;
+  phone: string | null;
+  mobile: string | null;
+  email: string | null;
+  notes: string | null;
+  is_primary: boolean;
   created_at: string;
 }
 
@@ -48,6 +89,56 @@ export interface Vehicle {
   vin: string | null;
   color: string | null;
   extra_data: Record<string, unknown> | null;
+}
+
+// Orders (flattened view for global list)
+export interface OrderListItem {
+  id: string;
+  title: string;
+  order_number: string | null;
+  status: AppointmentStatus;
+  start_time: string;
+  end_time: string;
+  is_multi_day: boolean;
+  color: string | null;
+  description: string | null;
+  customer_id: string | null;
+  customer_name: string | null;
+  location_id: string | null;
+  location_name: string | null;
+  location_city: string | null;
+  contact_person_id: string | null;
+  contact_person_name: string | null;
+  vehicle_id: string | null;
+  vehicle_display: string | null;
+  license_plate: string | null;
+  vin: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PaginatedOrderResponse {
+  items: OrderListItem[];
+  total: number;
+  page: number;
+  page_size: number;
+  total_pages: number;
+}
+
+export interface OrderSearchParams {
+  q?: string;
+  customer_id?: string;
+  vehicle_make?: string;
+  vehicle_model?: string;
+  license_plate?: string;
+  vin?: string;
+  status?: AppointmentStatus;
+  date_from?: string;
+  date_to?: string;
+  sort_by?: string;
+  sort_dir?: string;
+  page?: number;
+  page_size?: number;
 }
 
 // Modules
@@ -124,3 +215,6 @@ export interface ChatMessage {
   module_activated?: boolean;
   module_name?: string;
 }
+
+// Calendar view types
+export type CalendarView = "day" | "week" | "month";

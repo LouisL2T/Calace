@@ -43,6 +43,17 @@ export default function AuthPage() {
     }
   };
 
+  const handleDemo = () => {
+    const demoToken = "demo-token";
+    const demoTenant = "00000000-0000-0000-0000-000000000000";
+    const demoUser = "00000000-0000-0000-0000-000000000000";
+    localStorage.setItem("calace_token", demoToken);
+    localStorage.setItem("calace_tenant_id", demoTenant);
+    localStorage.setItem("calace_user_id", demoUser);
+    setAuth(demoTenant, demoUser);
+    router.push("/onboarding");
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 via-white to-primary-50 px-4">
       <div className="w-full max-w-md">
@@ -116,6 +127,23 @@ export default function AuthPage() {
               className="w-full py-2.5 bg-primary-600 text-white rounded-xl hover:bg-primary-700 disabled:opacity-50 transition-colors font-medium"
             >
               {loading ? "Bitte warten..." : isRegister ? "Konto erstellen" : "Anmelden"}
+            </button>
+            
+            <div className="relative mt-6 mb-4">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-200"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500">Oder zum Testen</span>
+              </div>
+            </div>
+            
+            <button
+              type="button"
+              onClick={handleDemo}
+              className="w-full py-2.5 bg-white border border-surface-300 text-gray-700 rounded-xl hover:bg-surface-50 transition-colors font-medium shadow-sm flex items-center justify-center gap-2"
+            >
+              <span>🚀</span> Demo Modus starten
             </button>
           </form>
         </div>

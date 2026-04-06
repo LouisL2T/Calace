@@ -4,12 +4,16 @@ import type {
   Appointment,
   Customer,
   Vehicle,
+  Location,
+  ContactPerson,
   AppModule,
   OnboardingResponse,
   ModuleExpandResponse,
   TimeEntry,
   Invoice,
   MaterialItem,
+  PaginatedOrderResponse,
+  OrderSearchParams,
 } from "@/types";
 
 const api = axios.create({ baseURL: "/api/v1" });
@@ -33,7 +37,7 @@ export const authAPI = {
 
 // --- Calendar ---
 export const calendarAPI = {
-  list: (params?: { start?: string; end?: string }) =>
+  list: (params?: { start?: string; end?: string; status?: string }) =>
     api.get<Appointment[]>("/calendar/appointments", { params }).then((r) => r.data),
   create: (data: Partial<Appointment>) =>
     api.post<Appointment>("/calendar/appointments", data).then((r) => r.data),
@@ -46,18 +50,53 @@ export const calendarAPI = {
 
 // --- CRM ---
 export const crmAPI = {
-  listCustomers: (search?: string) =>
-    api.get<Customer[]>("/crm/customers", { params: { search } }).then((r) => r.data),
+  // Customers
+  listCustomers: (search?: string, customer_type?: string) =>
+    api.get<Customer[]>("/crm/customers", { params: { search, customer_type } }).then((r) => r.data),
   createCustomer: (data: Partial<Customer>) =>
     api.post<Customer>("/crm/customers", data).then((r) => r.data),
   getCustomer: (id: string) =>
     api.get<Customer>(`/crm/customers/${id}`).then((r) => r.data),
   updateCustomer: (id: string, data: Partial<Customer>) =>
     api.put<Customer>(`/crm/customers/${id}`, data).then((r) => r.data),
-  listVehicles: (customerId?: string) =>
-    api.get<Vehicle[]>("/crm/vehicles", { params: { customer_id: customerId } }).then((r) => r.data),
+  deleteCustomer: (id: string) =>
+    api.delete(`/crm/customers/${id}`),
+
+  // Locations
+  listLocations: (customerId: string) =>
+    api.get<Location[]>(`/crm/customers/${customerId}/locations`).then((r) => r.data),
+  createLocation: (data: { customer_id: string; name: string; street?: string; zip_code?: string; city?: string; phone?: string; email?: string }) =>
+    api.post<Location>("/crm/locations", data).then((r) => r.data),
+  updateLocation: (id: string, data: Partial<Location>) =>
+    api.put<Location>(`/crm/locations/${id}`, data).then((r) => r.data),
+  deleteLocation: (id: string) =>
+    api.delete(`/crm/locations/${id}`),
+
+  // Contact Persons
+  listContacts: (locationId: string) =>
+    api.get<ContactPerson[]>(`/crm/locations/${locationId}/contacts`).then((r) => r.data),
+  createContact: (data: { location_id: string; first_name: string; last_name: string; role?: string; phone?: string; mobile?: string; email?: string; is_primary?: boolean }) =>
+    api.post<ContactPerson>("/crm/contacts", data).then((r) => r.data),
+  updateContact: (id: string, data: Partial<ContactPerson>) =>
+    api.put<ContactPerson>(`/crm/contacts/${id}`, data).then((r) => r.data),
+  deleteContact: (id: string) =>
+    api.delete(`/crm/contacts/${id}`),
+
+  // Vehicles
+  listVehicles: (customerId?: string, search?: string) =>
+    api.get<Vehicle[]>("/crm/vehicles", { params: { customer_id: customerId, search } }).then((r) => r.data),
   createVehicle: (data: Partial<Vehicle>) =>
     api.post<Vehicle>("/crm/vehicles", data).then((r) => r.data),
+  updateVehicle: (id: string, data: Partial<Vehicle>) =>
+    api.put<Vehicle>(`/crm/vehicles/${id}`, data).then((r) => r.data),
+  deleteVehicle: (id: string) =>
+    api.delete(`/crm/vehicles/${id}`),
+};
+
+// --- Orders ---
+export const ordersAPI = {
+  search: (params: OrderSearchParams) =>
+    api.get<PaginatedOrderResponse>("/orders/search", { params }).then((r) => r.data),
 };
 
 // --- AI ---

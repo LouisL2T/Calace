@@ -1,6 +1,7 @@
 "use client";
 
 import Sidebar from "@/components/ui/Sidebar";
+import FloatingChat from "@/components/chat/FloatingChat";
 import { useAppStore } from "@/store";
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -16,6 +17,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       >
         {children}
       </main>
+      <FloatingChat />
     </div>
   );
 }
