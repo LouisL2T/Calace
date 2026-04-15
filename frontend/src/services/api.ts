@@ -17,7 +17,11 @@ import type {
   TeamMember,
 } from "@/types";
 
-const api = axios.create({ baseURL: "/api/v1" });
+const baseURL = process.env.NEXT_PUBLIC_API_URL 
+  ? `${process.env.NEXT_PUBLIC_API_URL}/api/v1` 
+  : "/api/v1";
+
+const api = axios.create({ baseURL });
 
 // Inject auth token
 api.interceptors.request.use((config) => {
