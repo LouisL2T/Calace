@@ -4,16 +4,49 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.api.deps import get_current_user, get_tenant_id
 from app.db.session import get_db
-from app.models.calendar import Appointment
-from app.models.user import User
+from app.models.calendar import Appointment, AppointmentAssignee, AppointmentPriority
+from app.models.user import User, TenantMember
 from app.schemas.calendar import (
-    AppointmentCreate, AppointmentUpdate, AppointmentResponse, AppointmentDragDrop,
+    AppointmentCreate, AppointmentUpdate, AppointmentResponse,
+    AppointmentDragDrop, TeamMemberResponse,
 )
 
 router = APIRouter(prefix="/calendar", tags=["calendar"])
+
+
+def _build_response(appointment: Appointment) -> dict:
+    """Build AppointmentResponse dict with resolved M2M assignees."""
+    ids = [a.user_id for a in (appointment.assignees or [])]
+    names = [a.user.full_name for a in (appointment.assignees or []) if a.user]
+    return AppointmentResponse(
+        id=appointment.id,
+        tenant_id=appointment.tenant_id,
+        title=appointment.title,
+        description=appointment.description,
+        customer_id=appointment.customer_id,
+        assigned_to=appointment.assigned_to,
+        assigned_to_ids=ids,
+        assigned_to_names=names,
+        project_id=appointment.project_id,
+        vehicle_id=appointment.vehicle_id,
+        location_id=appointment.location_id,
+        contact_person_id=appointment.contact_person_id,
+        start_time=appointment.start_time,
+        end_time=appointment.end_time,
+        is_multi_day=appointment.is_multi_day,
+        order_number=appointment.order_number,
+        color=appointment.color,
+        status=appointment.status,
+        priority=appointment.priority,
+        location_text=appointment.location_text,
+        metadata=appointment.meta_data,
+        created_at=appointment.created_at,
+        updated_at=appointment.updated_at,
+    )
 
 
 @router.get("/appointments", response_model=list[AppointmentResponse])
@@ -22,23 +55,35 @@ async def list_appointments(
     end: datetime | None = Query(None),
     assigned_to: uuid.UUID | None = Query(None),
     status: str | None = Query(None),
+    priority: str | None = Query(None),
     tenant_id: uuid.UUID = Depends(get_tenant_id),
     db: AsyncSession = Depends(get_db),
 ):
-    query = select(Appointment).where(Appointment.tenant_id == tenant_id)
+    query = (
+        select(Appointment)
+        .options(selectinload(Appointment.assignees).selectinload(AppointmentAssignee.user))
+        .where(Appointment.tenant_id == tenant_id)
+    )
     # Overlap query: show appointments that overlap with the requested time window
-    # This correctly handles multi-day appointments
     if start:
         query = query.where(Appointment.end_time >= start)
     if end:
         query = query.where(Appointment.start_time <= end)
     if assigned_to:
-        query = query.where(Appointment.assigned_to == assigned_to)
+        # Filter by M2M assignee
+        query = query.where(
+            Appointment.id.in_(
+                select(AppointmentAssignee.appointment_id).where(AppointmentAssignee.user_id == assigned_to)
+            )
+        )
     if status:
         query = query.where(Appointment.status == status)
+    if priority:
+        query = query.where(Appointment.priority == priority)
     query = query.order_by(Appointment.start_time)
     result = await db.execute(query)
-    return result.scalars().all()
+    appointments = result.scalars().unique().all()
+    return [_build_response(a) for a in appointments]
 
 
 @router.post("/appointments", response_model=AppointmentResponse)
@@ -47,7 +92,7 @@ async def create_appointment(
     tenant_id: uuid.UUID = Depends(get_tenant_id),
     db: AsyncSession = Depends(get_db),
 ):
-    dump = data.model_dump()
+    dump = data.model_dump(exclude={"assigned_to_ids"})
     # Map 'metadata' key to 'meta_data' column name
     if "metadata" in dump:
         dump["meta_data"] = dump.pop("metadata")
@@ -60,9 +105,26 @@ async def create_appointment(
 
     appointment = Appointment(tenant_id=tenant_id, **dump)
     db.add(appointment)
+    await db.flush()  # Get the appointment ID
+
+    # Create M2M assignees
+    for user_id in (data.assigned_to_ids or []):
+        assignee = AppointmentAssignee(appointment_id=appointment.id, user_id=user_id)
+        db.add(assignee)
+        # Also set legacy assigned_to to the first user for backward compat
+        if not appointment.assigned_to:
+            appointment.assigned_to = user_id
+
     await db.commit()
-    await db.refresh(appointment)
-    return appointment
+
+    # Re-fetch with relationships
+    result = await db.execute(
+        select(Appointment)
+        .options(selectinload(Appointment.assignees).selectinload(AppointmentAssignee.user))
+        .where(Appointment.id == appointment.id)
+    )
+    appointment = result.scalar_one()
+    return _build_response(appointment)
 
 
 @router.put("/appointments/{appointment_id}", response_model=AppointmentResponse)
@@ -73,13 +135,15 @@ async def update_appointment(
     db: AsyncSession = Depends(get_db),
 ):
     result = await db.execute(
-        select(Appointment).where(Appointment.id == appointment_id, Appointment.tenant_id == tenant_id)
+        select(Appointment)
+        .options(selectinload(Appointment.assignees))
+        .where(Appointment.id == appointment_id, Appointment.tenant_id == tenant_id)
     )
     appointment = result.scalar_one_or_none()
     if not appointment:
         raise HTTPException(status_code=404)
 
-    update_data = data.model_dump(exclude_unset=True)
+    update_data = data.model_dump(exclude_unset=True, exclude={"assigned_to_ids"})
     if "metadata" in update_data:
         update_data["meta_data"] = update_data.pop("metadata")
 
@@ -90,9 +154,29 @@ async def update_appointment(
     if appointment.start_time and appointment.end_time:
         appointment.is_multi_day = appointment.start_time.date() != appointment.end_time.date()
 
+    # Update M2M assignees if provided
+    if data.assigned_to_ids is not None:
+        # Remove old assignees
+        for old in list(appointment.assignees):
+            await db.delete(old)
+        # Add new assignees
+        appointment.assigned_to = None
+        for user_id in data.assigned_to_ids:
+            assignee = AppointmentAssignee(appointment_id=appointment.id, user_id=user_id)
+            db.add(assignee)
+            if not appointment.assigned_to:
+                appointment.assigned_to = user_id
+
     await db.commit()
-    await db.refresh(appointment)
-    return appointment
+
+    # Re-fetch with relationships
+    result = await db.execute(
+        select(Appointment)
+        .options(selectinload(Appointment.assignees).selectinload(AppointmentAssignee.user))
+        .where(Appointment.id == appointment.id)
+    )
+    appointment = result.scalar_one()
+    return _build_response(appointment)
 
 
 @router.patch("/appointments/{appointment_id}/move", response_model=AppointmentResponse)
@@ -104,7 +188,9 @@ async def drag_drop_appointment(
 ):
     """Drag-and-drop rescheduling endpoint."""
     result = await db.execute(
-        select(Appointment).where(Appointment.id == appointment_id, Appointment.tenant_id == tenant_id)
+        select(Appointment)
+        .options(selectinload(Appointment.assignees).selectinload(AppointmentAssignee.user))
+        .where(Appointment.id == appointment_id, Appointment.tenant_id == tenant_id)
     )
     appointment = result.scalar_one_or_none()
     if not appointment:
@@ -116,7 +202,7 @@ async def drag_drop_appointment(
 
     await db.commit()
     await db.refresh(appointment)
-    return appointment
+    return _build_response(appointment)
 
 
 @router.delete("/appointments/{appointment_id}")
@@ -134,3 +220,18 @@ async def delete_appointment(
     await db.delete(appointment)
     await db.commit()
     return {"ok": True}
+
+
+@router.get("/team-members", response_model=list[TeamMemberResponse])
+async def list_team_members(
+    tenant_id: uuid.UUID = Depends(get_tenant_id),
+    db: AsyncSession = Depends(get_db),
+):
+    """List all users belonging to the current tenant for the assignee dropdown."""
+    result = await db.execute(
+        select(User)
+        .join(TenantMember, TenantMember.user_id == User.id)
+        .where(TenantMember.tenant_id == tenant_id, User.is_active == True)
+        .order_by(User.full_name)
+    )
+    return result.scalars().all()

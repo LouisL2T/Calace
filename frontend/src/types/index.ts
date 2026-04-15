@@ -7,7 +7,18 @@ export interface AuthTokens {
 }
 
 // Calendar
-export type AppointmentStatus = "scheduled" | "confirmed" | "in_progress" | "completed" | "cancelled" | "no_show";
+export type AppointmentStatus =
+  | "open"
+  | "in_progress"
+  | "completed"
+  | "postponed"
+  // Legacy statuses (backward compat)
+  | "scheduled"
+  | "confirmed"
+  | "cancelled"
+  | "no_show";
+
+export type AppointmentPriority = "low" | "medium" | "high";
 
 export interface Appointment {
   id: string;
@@ -16,6 +27,8 @@ export interface Appointment {
   description: string | null;
   customer_id: string | null;
   assigned_to: string | null;
+  assigned_to_ids: string[];
+  assigned_to_names: string[];
   project_id: string | null;
   vehicle_id: string | null;
   location_id: string | null;
@@ -26,9 +39,17 @@ export interface Appointment {
   order_number: string | null;
   color: string | null;
   status: AppointmentStatus;
+  priority: AppointmentPriority;
+  location_text: string | null;
   metadata: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface TeamMember {
+  id: string;
+  full_name: string;
+  email: string;
 }
 
 // CRM
@@ -217,4 +238,4 @@ export interface ChatMessage {
 }
 
 // Calendar view types
-export type CalendarView = "day" | "week" | "month";
+export type CalendarView = "day" | "week" | "month" | "list" | "timeline";

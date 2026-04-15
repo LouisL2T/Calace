@@ -14,6 +14,7 @@ import type {
   MaterialItem,
   PaginatedOrderResponse,
   OrderSearchParams,
+  TeamMember,
 } from "@/types";
 
 const api = axios.create({ baseURL: "/api/v1" });
@@ -37,15 +38,17 @@ export const authAPI = {
 
 // --- Calendar ---
 export const calendarAPI = {
-  list: (params?: { start?: string; end?: string; status?: string }) =>
+  list: (params?: { start?: string; end?: string; status?: string; priority?: string; assigned_to?: string }) =>
     api.get<Appointment[]>("/calendar/appointments", { params }).then((r) => r.data),
-  create: (data: Partial<Appointment>) =>
+  create: (data: Partial<Appointment> & { assigned_to_ids?: string[] }) =>
     api.post<Appointment>("/calendar/appointments", data).then((r) => r.data),
-  update: (id: string, data: Partial<Appointment>) =>
+  update: (id: string, data: Partial<Appointment> & { assigned_to_ids?: string[] }) =>
     api.put<Appointment>(`/calendar/appointments/${id}`, data).then((r) => r.data),
   move: (id: string, start_time: string, end_time: string) =>
     api.patch<Appointment>(`/calendar/appointments/${id}/move`, { start_time, end_time }).then((r) => r.data),
   delete: (id: string) => api.delete(`/calendar/appointments/${id}`),
+  listTeamMembers: () =>
+    api.get<TeamMember[]>("/calendar/team-members").then((r) => r.data),
 };
 
 // --- CRM ---

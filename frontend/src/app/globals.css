@@ -8,12 +8,30 @@
   --text-primary: #1a1a2e;
   --text-secondary: #6c757d;
   --accent: #4c6ef5;
+
+  /* Status colors */
+  --status-open: #4c6ef5;
+  --status-open-bg: #f0f4ff;
+  --status-in-progress: #f59f00;
+  --status-in-progress-bg: #fff9e6;
+  --status-completed: #40c057;
+  --status-completed-bg: #ebfbee;
+  --status-postponed: #868e96;
+  --status-postponed-bg: #f1f3f5;
+
+  /* Priority colors */
+  --prio-low: #51cf66;
+  --prio-low-bg: #ebfbee;
+  --prio-medium: #fab005;
+  --prio-medium-bg: #fff9e6;
+  --prio-high: #ff6b6b;
+  --prio-high-bg: #fff5f5;
 }
 
 body {
   background: var(--bg-primary);
   color: var(--text-primary);
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
 /* Module expansion particle burst */
@@ -36,4 +54,145 @@ body {
 
 .fc .fc-event:active {
   cursor: grabbing;
+}
+
+/* ─── Calendar View Transitions ─────────────────────────────────────────── */
+
+.view-enter {
+  animation: viewFadeIn 0.2s ease-out;
+}
+
+@keyframes viewFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── Status Badge ──────────────────────────────────────────────────────── */
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.status-open { background: var(--status-open-bg); color: var(--status-open); }
+.status-in_progress { background: var(--status-in-progress-bg); color: var(--status-in-progress); }
+.status-completed { background: var(--status-completed-bg); color: var(--status-completed); }
+.status-postponed { background: var(--status-postponed-bg); color: var(--status-postponed); }
+/* Legacy */
+.status-scheduled { background: var(--status-open-bg); color: var(--status-open); }
+.status-confirmed { background: var(--status-open-bg); color: #3b82f6; }
+.status-cancelled { background: #fff5f5; color: #ef4444; }
+.status-no_show { background: #fff5f5; color: #ef4444; }
+
+/* ─── Priority Badge ────────────────────────────────────────────────────── */
+
+.prio-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.prio-low { background: var(--prio-low-bg); color: var(--prio-low); }
+.prio-medium { background: var(--prio-medium-bg); color: var(--prio-medium); }
+.prio-high { background: var(--prio-high-bg); color: var(--prio-high); }
+
+/* ─── Priority Dot (for calendar blocks) ───────────────────────────────── */
+
+.prio-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.prio-dot-low { background: var(--prio-low); }
+.prio-dot-medium { background: var(--prio-medium); }
+.prio-dot-high { background: var(--prio-high); }
+
+/* ─── Timeline Stripe Animation ─────────────────────────────────────────── */
+
+.timeline-stripe {
+  position: relative;
+  overflow: hidden;
+}
+
+.timeline-stripe::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.04), transparent);
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { left: -100%; }
+  100% { left: 200%; }
+}
+
+/* ─── Glass Card ────────────────────────────────────────────────────────── */
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* ─── Scrollbar ─────────────────────────────────────────────────────────── */
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #dee2e6;
+  border-radius: 3px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #adb5bd;
+}
+
+/* ─── Multi-select checkboxes ───────────────────────────────────────────── */
+
+.assignee-check {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #dee2e6;
+  border-radius: 4px;
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.assignee-check:checked {
+  background: #4c6ef5;
+  border-color: #4c6ef5;
+}
+
+.assignee-check:checked::after {
+  content: '✓';
+  position: absolute;
+  top: -1px;
+  left: 2px;
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
 }
