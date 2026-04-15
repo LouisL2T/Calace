@@ -35,7 +35,7 @@ export default function AuthPage() {
       localStorage.setItem("calace_tenant_id", result.tenant_id);
       localStorage.setItem("calace_user_id", result.user_id);
       setAuth(result.tenant_id, result.user_id);
-      router.push("/onboarding");
+      router.push("/calendar");
     } catch {
       setError(isRegister ? "Registrierung fehlgeschlagen" : "Ungültige Anmeldedaten");
     } finally {
@@ -51,7 +51,7 @@ export default function AuthPage() {
     localStorage.setItem("calace_tenant_id", demoTenant);
     localStorage.setItem("calace_user_id", demoUser);
     setAuth(demoTenant, demoUser);
-    router.push("/onboarding");
+    router.push("/calendar");
   };
 
   return (

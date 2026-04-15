@@ -30,11 +30,6 @@ const ICON_MAP: Record<string, React.ReactNode> = {
 
 const BUILTIN_NAV = [
   { slug: "calendar", name: "Kalender", href: "/calendar", icon: "calendar" },
-  { slug: "orders", name: "Aufträge", href: "/orders", icon: "orders" },
-  { slug: "crm", name: "Kunden", href: "/crm", icon: "crm" },
-  { slug: "time_tracking", name: "Zeiterfassung", href: "/timetracking", icon: "time_tracking" },
-  { slug: "invoicing", name: "Rechnungen", href: "/invoicing", icon: "invoicing" },
-  { slug: "materials", name: "Material", href: "/materials", icon: "materials" },
 ];
 
 export default function Sidebar() {
@@ -118,18 +113,7 @@ export default function Sidebar() {
         })}
       </nav>
 
-      {/* AI prompt shortcut */}
-      {sidebarOpen && (
-        <div className="p-3 border-t border-surface-200">
-          <Link
-            href="/onboarding"
-            className="flex items-center gap-2 px-3 py-2 rounded-lg bg-primary-50 text-primary-700 hover:bg-primary-100 transition-colors"
-          >
-            <MessageSquare size={18} />
-            <span className="text-sm font-medium">KI-Assistent</span>
-          </Link>
-        </div>
-      )}
+      {/* UI removed AI prompt shortcut */}
 
       {/* Logout */}
       <div className="p-3 border-t border-surface-200">
