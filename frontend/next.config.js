@@ -4,12 +4,11 @@ const nextConfig = {
     unoptimized: true,
   },
   async rewrites() {
-    // Only used in local dev – on Netlify the redirect rules in netlify.toml handle this
-    if (process.env.NETLIFY) return [];
+    const backendUrl = process.env.BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
     return [
       {
         source: "/api/:path*",
-        destination: "http://localhost:8000/api/:path*",
+        destination: `${backendUrl}/api/:path*`,
       },
     ];
   },
