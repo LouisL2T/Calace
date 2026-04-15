@@ -30,6 +30,11 @@ const ICON_MAP: Record<string, React.ReactNode> = {
 
 const BUILTIN_NAV = [
   { slug: "calendar", name: "Kalender", href: "/calendar", icon: "calendar" },
+  { slug: "orders", name: "Aufträge", href: "/orders", icon: "orders" },
+  { slug: "crm", name: "Kunden", href: "/crm", icon: "crm" },
+  { slug: "time_tracking", name: "Zeiterfassung", href: "/timetracking", icon: "time_tracking" },
+  { slug: "invoicing", name: "Rechnungen", href: "/invoicing", icon: "invoicing" },
+  { slug: "materials", name: "Material", href: "/materials", icon: "materials" },
 ];
 
 export default function Sidebar() {

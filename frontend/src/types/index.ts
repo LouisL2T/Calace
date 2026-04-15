@@ -238,4 +238,4 @@ export interface ChatMessage {
 }
 
 // Calendar view types
-export type CalendarView = "day" | "week" | "month" | "list" | "timeline";
+export type CalendarView = "day" | "week" | "month" | "year" | "list" | "timeline";

@@ -5,7 +5,7 @@ import { useCalendarStore } from "@/store";
 import { calendarAPI, crmAPI } from "@/services/api";
 import type { CalendarView } from "@/types";
 import {
-  DayView, WeekView, MonthView, ListView, TimelineView,
+  DayView, WeekView, MonthView, YearView, ListView, TimelineView,
   CreateAppointmentModal, FilterBar,
   MONTHS_DE, formatDateDE, getWeekDays, getViewRange,
 } from "@/components/calendar";
@@ -16,6 +16,7 @@ const VIEW_CONFIG: { key: CalendarView; label: string; icon: React.ReactNode }[]
   { key: "day",      label: "Tag",      icon: <Calendar size={14} /> },
   { key: "week",     label: "Woche",    icon: <Columns size={14} /> },
   { key: "month",    label: "Monat",    icon: <LayoutGrid size={14} /> },
+  { key: "year",     label: "Jahr",     icon: <Calendar size={14} /> },
   { key: "list",     label: "Liste",    icon: <List size={14} /> },
   { key: "timeline", label: "Timeline", icon: <Clock size={14} /> },
 ];
@@ -59,12 +60,14 @@ export default function CalendarPage() {
     const next = new Date(currentDate);
     if (currentView === "day" || currentView === "timeline") next.setDate(next.getDate() + delta);
     else if (currentView === "week") next.setDate(next.getDate() + delta * 7);
+    else if (currentView === "year") next.setFullYear(next.getFullYear() + delta);
     else next.setMonth(next.getMonth() + delta);
     setCurrentDate(next);
   };
 
   // Header title
   const headerTitle = useMemo(() => {
+    if (currentView === "year") return `${currentDate.getFullYear()}`;
     if (currentView === "day") return formatDateDE(currentDate);
     if (currentView === "timeline") {
       const end = new Date(currentDate);
@@ -88,47 +91,48 @@ export default function CalendarPage() {
   return (
     <div>
       {/* ─── Header ────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Einsatzplanung</h1>
           <p className="text-sm text-gray-500">{headerTitle}</p>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Navigation */}
-          <div className="flex items-center bg-white rounded-lg border border-surface-200">
-            <button onClick={() => navigate(-1)} className="p-2 hover:bg-surface-100 rounded-l-lg transition-colors">
-              <ChevronLeft size={16} />
-            </button>
-            <button onClick={() => setCurrentDate(new Date())}
-              className="px-3 py-2 text-xs font-medium hover:bg-surface-100 transition-colors">
-              Heute
-            </button>
-            <button onClick={() => navigate(1)} className="p-2 hover:bg-surface-100 rounded-r-lg transition-colors">
-              <ChevronRight size={16} />
+        <div className="flex flex-col items-end gap-2 w-full sm:w-auto">
+          {/* Top row: Navigate and Create */}
+          <div className="flex items-center gap-2">
+            <div className="flex items-center bg-white rounded-lg border border-surface-200 shadow-sm">
+              <button onClick={() => navigate(-1)} className="p-2 hover:bg-surface-100 rounded-l-lg transition-colors">
+                <ChevronLeft size={16} />
+              </button>
+              <button onClick={() => setCurrentDate(new Date())}
+                className="px-3 py-2 text-xs font-medium hover:bg-surface-100 transition-colors">
+                Heute
+              </button>
+              <button onClick={() => navigate(1)} className="p-2 hover:bg-surface-100 rounded-r-lg transition-colors">
+                <ChevronRight size={16} />
+              </button>
+            </div>
+            
+            <button onClick={() => setShowCreateModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium shadow-sm">
+              <Plus size={16} />
+              <span>Neu</span>
             </button>
           </div>
 
-          {/* View Switcher */}
-          <div className="flex items-center bg-white rounded-lg border border-surface-200">
+          {/* Bottom row: View Switcher */}
+          <div className="flex items-center bg-white rounded-lg border border-surface-200 shadow-sm overflow-x-auto w-full sm:w-auto">
             {VIEW_CONFIG.map((v, i) => (
               <button key={v.key} onClick={() => setCurrentView(v.key)}
-                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors ${
+                className={`flex items-center gap-1.5 px-3 py-2 text-xs font-medium transition-colors whitespace-nowrap ${
                   currentView === v.key
                     ? "bg-primary-600 text-white"
                     : "text-gray-600 hover:bg-surface-100"
                 } ${i === 0 ? "rounded-l-lg" : ""} ${i === VIEW_CONFIG.length - 1 ? "rounded-r-lg" : ""}`}>
                 {v.icon}
-                <span className="hidden sm:inline">{v.label}</span>
+                <span>{v.label}</span>
               </button>
             ))}
           </div>
-
-          {/* Create */}
-          <button onClick={() => setShowCreateModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm font-medium shadow-sm">
-            <Plus size={16} />
-            <span>Neu</span>
-          </button>
         </div>
       </div>
 
@@ -154,6 +158,18 @@ export default function CalendarPage() {
       {currentView === "month" && (
         <MonthView date={currentDate} appointments={appointments}
           onDayClick={(d) => { setCurrentDate(d); setCurrentView("day"); }} />
+      )}
+      {currentView === "year" && (
+        <YearView
+          date={currentDate}
+          appointments={appointments}
+          onMonthClick={(m) => {
+            const next = new Date(currentDate);
+            next.setMonth(m);
+            setCurrentDate(next);
+            setCurrentView("month");
+          }}
+        />
       )}
       {currentView === "list" && <ListView appointments={appointments} />}
       {currentView === "timeline" && <TimelineView date={currentDate} appointments={appointments} />}
