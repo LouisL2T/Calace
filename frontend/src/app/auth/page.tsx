@@ -118,7 +118,25 @@ export default function AuthPage() {
             >
               {loading ? "Bitte warten..." : isRegister ? "Konto erstellen" : "Anmelden"}
             </button>
-
+            <div className="relative flex items-center justify-center mt-4 mb-4">
+              <span className="absolute px-2 bg-white text-sm text-gray-400">ODER</span>
+              <div className="w-full border-t border-gray-200"></div>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                const demoTenantId = "00000000-0000-0000-0000-000000000001";
+                const demoUserId = "00000000-0000-0000-0000-000000000001";
+                localStorage.setItem("calace_token", "demo_token_123");
+                localStorage.setItem("calace_tenant_id", demoTenantId);
+                localStorage.setItem("calace_user_id", demoUserId);
+                setAuth(demoTenantId, demoUserId);
+                router.push("/calendar");
+              }}
+              className="w-full py-2.5 bg-surface-100 text-surface-700 rounded-xl hover:bg-surface-200 transition-colors font-medium border border-surface-300"
+            >
+              Demo-Modus starten (Ohne Login)
+            </button>
           </form>
         </div>
       </div>
