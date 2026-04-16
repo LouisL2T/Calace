@@ -1,3 +1,4 @@
+from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
 
@@ -7,6 +8,13 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql+asyncpg://calace:calace@localhost:5432/calace"
     DATABASE_URL_SYNC: str = "postgresql://calace:calace@localhost:5432/calace"
     REDIS_URL: str = "redis://localhost:6379/0"
+
+    @field_validator("DATABASE_URL", "DATABASE_URL_SYNC", mode="before")
+    @classmethod
+    def strip_whitespace(cls, v: str) -> str:
+        if isinstance(v, str):
+            return v.strip()
+        return v
 
     # Auth
     SECRET_KEY: str = "change-me-in-production"
