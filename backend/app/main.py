@@ -24,21 +24,11 @@ ALLOWED_ORIGINS = [
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Run migrations automatically on startup
-    if not settings.DATABASE_URL.startswith("sqlite"):
-        import subprocess, sys
-        logger.info("Running Alembic migrations...")
-        result = subprocess.run(
-            [sys.executable, "-m", "alembic", "upgrade", "head"],
-            capture_output=True, text=True
-        )
-        if result.returncode != 0:
-            logger.error("Alembic migration failed: %s", result.stderr)
-        else:
-            logger.info("Migrations done: %s", result.stdout)
-    else:
+    # For SQLite (local dev only): create tables on startup
+    if settings.DATABASE_URL.startswith("sqlite"):
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+    # For Postgres (production): migrations are managed via Alembic CLI
     yield
 
 app = FastAPI(
