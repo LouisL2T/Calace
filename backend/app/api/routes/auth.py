@@ -46,7 +46,11 @@ async def login(data: LoginRequest, db: AsyncSession = Depends(get_db)):
     member_result = await db.execute(
         select(TenantMember.tenant_id).where(TenantMember.user_id == user.id).limit(1)
     )
-    tenant_id = member_result.scalar_one()
+    tenant_id = member_result.scalar()
+    
+    if not tenant_id:
+        # Fallback if no tenant exists for some reason
+        tenant_id = str(user.id) # Or raise a clean 400 error instead of 500
 
     token = create_access_token(str(user.id))
     return TokenResponse(access_token=token, tenant_id=tenant_id, user_id=user.id)

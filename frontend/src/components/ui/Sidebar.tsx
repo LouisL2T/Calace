@@ -123,7 +123,10 @@ export default function Sidebar() {
       {/* Logout */}
       <div className="p-3 border-t border-surface-200">
         <button
-          onClick={logout}
+          onClick={() => {
+            logout();
+            window.location.href = "/auth";
+          }}
           className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-gray-500 hover:bg-red-50 hover:text-red-600 transition-colors"
         >
           <LogOut size={18} />
