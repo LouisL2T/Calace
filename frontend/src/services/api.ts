@@ -15,6 +15,10 @@ import type {
   PaginatedOrderResponse,
   OrderSearchParams,
   TeamMember,
+  Notification,
+  Checklist,
+  ColorRule,
+  SavedView,
 } from "@/types";
 
 const baseURL = process.env.NEXT_PUBLIC_API_URL 
@@ -42,22 +46,35 @@ export const authAPI = {
 
 // --- Calendar ---
 export const calendarAPI = {
-  list: (params?: { start?: string; end?: string; status?: string; priority?: string; assigned_to?: string }) =>
+  list: (params?: {
+    start?: string;
+    end?: string;
+    status?: string;
+    priority?: string;
+    assigned_to?: string;
+    customer_id?: string;
+    needs_scan?: boolean;
+  }) =>
     api.get<Appointment[]>("/calendar/appointments", { params }).then((r) => r.data),
-  create: (data: Partial<Appointment> & { assigned_to_ids?: string[] }) =>
+  create: (data: Partial<Appointment> & { assigned_to_ids?: string[]; needs_scan?: boolean }) =>
     api.post<Appointment>("/calendar/appointments", data).then((r) => r.data),
-  update: (id: string, data: Partial<Appointment> & { assigned_to_ids?: string[] }) =>
+  update: (id: string, data: Partial<Appointment> & { assigned_to_ids?: string[]; needs_scan?: boolean }) =>
     api.put<Appointment>(`/calendar/appointments/${id}`, data).then((r) => r.data),
   move: (id: string, start_time: string, end_time: string) =>
     api.patch<Appointment>(`/calendar/appointments/${id}/move`, { start_time, end_time }).then((r) => r.data),
   delete: (id: string) => api.delete(`/calendar/appointments/${id}`),
   listTeamMembers: () =>
     api.get<TeamMember[]>("/calendar/team-members").then((r) => r.data),
+  listSavedViews: () =>
+    api.get<SavedView[]>("/calendar/saved-views").then((r) => r.data),
+  saveView: (view: SavedView) =>
+    api.post<SavedView>("/calendar/saved-views", view).then((r) => r.data),
+  deleteSavedView: (id: string) =>
+    api.delete(`/calendar/saved-views/${id}`),
 };
 
 // --- CRM ---
 export const crmAPI = {
-  // Customers
   listCustomers: (search?: string, customer_type?: string) =>
     api.get<Customer[]>("/crm/customers", { params: { search, customer_type } }).then((r) => r.data),
   createCustomer: (data: Partial<Customer>) =>
@@ -69,7 +86,6 @@ export const crmAPI = {
   deleteCustomer: (id: string) =>
     api.delete(`/crm/customers/${id}`),
 
-  // Locations
   listLocations: (customerId: string) =>
     api.get<Location[]>(`/crm/customers/${customerId}/locations`).then((r) => r.data),
   createLocation: (data: { customer_id: string; name: string; street?: string; zip_code?: string; city?: string; phone?: string; email?: string }) =>
@@ -79,7 +95,6 @@ export const crmAPI = {
   deleteLocation: (id: string) =>
     api.delete(`/crm/locations/${id}`),
 
-  // Contact Persons
   listContacts: (locationId: string) =>
     api.get<ContactPerson[]>(`/crm/locations/${locationId}/contacts`).then((r) => r.data),
   createContact: (data: { location_id: string; first_name: string; last_name: string; role?: string; phone?: string; mobile?: string; email?: string; is_primary?: boolean }) =>
@@ -89,7 +104,6 @@ export const crmAPI = {
   deleteContact: (id: string) =>
     api.delete(`/crm/contacts/${id}`),
 
-  // Vehicles
   listVehicles: (customerId?: string, search?: string) =>
     api.get<Vehicle[]>("/crm/vehicles", { params: { customer_id: customerId, search } }).then((r) => r.data),
   createVehicle: (data: Partial<Vehicle>) =>
@@ -104,6 +118,48 @@ export const crmAPI = {
 export const ordersAPI = {
   search: (params: OrderSearchParams) =>
     api.get<PaginatedOrderResponse>("/orders/search", { params }).then((r) => r.data),
+};
+
+// --- Notifications ---
+export const notificationsAPI = {
+  list: (unreadOnly = false) =>
+    api.get<Notification[]>("/notifications", { params: { unread_only: unreadOnly } }).then((r) => r.data),
+  unreadCount: () =>
+    api.get<{ count: number }>("/notifications/unread-count").then((r) => r.data),
+  markRead: (id: string) =>
+    api.post(`/notifications/${id}/read`),
+  markAllRead: () =>
+    api.post("/notifications/read-all"),
+};
+
+// --- Checklist ---
+export const checklistAPI = {
+  get: (appointmentId: string) =>
+    api.get<Checklist>(`/checklists/${appointmentId}`).then((r) => r.data),
+  createOrUpdate: (appointmentId: string, data: Partial<Checklist>) =>
+    api.post<Checklist>(`/checklists/${appointmentId}`, data).then((r) => r.data),
+  uploadPhoto: (appointmentId: string, photoType: string, file: File) => {
+    const form = new FormData();
+    form.append("photo_type", photoType);
+    form.append("file", file);
+    return api.post<{ ok: boolean; file_url: string; photo_type: string }>(
+      `/checklists/${appointmentId}/photos`,
+      form,
+      { headers: { "Content-Type": "multipart/form-data" } }
+    ).then((r) => r.data);
+  },
+};
+
+// --- Color Rules ---
+export const colorRulesAPI = {
+  list: () =>
+    api.get<ColorRule[]>("/color-rules").then((r) => r.data),
+  create: (data: Omit<ColorRule, "id" | "tenant_id" | "created_at">) =>
+    api.post<ColorRule>("/color-rules", data).then((r) => r.data),
+  update: (id: string, data: Partial<ColorRule>) =>
+    api.put<ColorRule>(`/color-rules/${id}`, data).then((r) => r.data),
+  delete: (id: string) =>
+    api.delete(`/color-rules/${id}`),
 };
 
 // --- AI ---

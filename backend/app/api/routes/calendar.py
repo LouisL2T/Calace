@@ -9,11 +9,13 @@ from sqlalchemy.orm import selectinload
 from app.api.deps import get_current_user, get_tenant_id
 from app.db.session import get_db
 from app.models.calendar import Appointment, AppointmentAssignee, AppointmentPriority
-from app.models.user import User, TenantMember
+from app.models.notification import Notification
+from app.models.user import User, TenantMember, UserRole
 from app.schemas.calendar import (
     AppointmentCreate, AppointmentUpdate, AppointmentResponse,
     AppointmentDragDrop, TeamMemberResponse,
 )
+from app.services.adi_client import create_adi_scan_job
 
 router = APIRouter(prefix="/calendar", tags=["calendar"])
 
@@ -44,9 +46,40 @@ def _build_response(appointment: Appointment) -> dict:
         priority=appointment.priority,
         location_text=appointment.location_text,
         metadata=appointment.meta_data,
+        needs_scan=appointment.needs_scan,
+        scan_notified=appointment.scan_notified,
+        scan_job_id=appointment.scan_job_id,
         created_at=appointment.created_at,
         updated_at=appointment.updated_at,
     )
+
+
+async def _notify_scanner_operators(
+    appointment: Appointment,
+    tenant_id: uuid.UUID,
+    db: AsyncSession,
+) -> None:
+    """Erstellt In-App-Benachrichtigungen für alle Scanner-Operator-Nutzer des Tenants."""
+    # Alle Tenant-Mitglieder mit scanner_operator-Rolle suchen
+    result = await db.execute(
+        select(TenantMember).where(
+            TenantMember.tenant_id == tenant_id,
+            TenantMember.role == UserRole.SCANNER_OPERATOR,
+        )
+    )
+    operators = result.scalars().all()
+
+    for member in operators:
+        notification = Notification(
+            tenant_id=tenant_id,
+            user_id=member.user_id,
+            appointment_id=appointment.id,
+            type="scan_request",
+            title="Neuer Scan-Auftrag",
+            body=f'Fahrzeug-Scan erforderlich für Auftrag: {appointment.title}',
+            is_read=False,
+        )
+        db.add(notification)
 
 
 @router.get("/appointments", response_model=list[AppointmentResponse])
@@ -54,8 +87,10 @@ async def list_appointments(
     start: datetime | None = Query(None),
     end: datetime | None = Query(None),
     assigned_to: uuid.UUID | None = Query(None),
+    customer_id: uuid.UUID | None = Query(None),
     status: str | None = Query(None),
     priority: str | None = Query(None),
+    needs_scan: bool | None = Query(None),
     tenant_id: uuid.UUID = Depends(get_tenant_id),
     db: AsyncSession = Depends(get_db),
 ):
@@ -76,10 +111,15 @@ async def list_appointments(
                 select(AppointmentAssignee.appointment_id).where(AppointmentAssignee.user_id == assigned_to)
             )
         )
+    if customer_id:
+        query = query.where(Appointment.customer_id == customer_id)
     if status:
         query = query.where(Appointment.status == status)
     if priority:
         query = query.where(Appointment.priority == priority)
+    if needs_scan is not None:
+        query = query.where(Appointment.needs_scan == needs_scan)
+
     query = query.order_by(Appointment.start_time)
     result = await db.execute(query)
     appointments = result.scalars().unique().all()
@@ -115,7 +155,22 @@ async def create_appointment(
         if not appointment.assigned_to:
             appointment.assigned_to = user_id
 
+    # Scanner-Operator-Workflow
+    if data.needs_scan:
+        await _notify_scanner_operators(appointment, tenant_id, db)
+        appointment.scan_notified = True
+
     await db.commit()
+
+    # ADI-Schnittstelle: Scan-Auftrag asynchron erstellen (fire-and-forget)
+    if data.needs_scan:
+        try:
+            job_id = await create_adi_scan_job(appointment)
+            if job_id:
+                appointment.scan_job_id = job_id
+                await db.commit()
+        except Exception:
+            pass  # Fehler wird im adi_client geloggt, blockiert nicht
 
     # Re-fetch with relationships
     result = await db.execute(
@@ -147,6 +202,13 @@ async def update_appointment(
     if "metadata" in update_data:
         update_data["meta_data"] = update_data.pop("metadata")
 
+    # Check if needs_scan is being turned ON for the first time
+    scan_just_enabled = (
+        data.needs_scan is True
+        and not appointment.needs_scan
+        and not appointment.scan_notified
+    )
+
     for field, value in update_data.items():
         setattr(appointment, field, value)
 
@@ -167,7 +229,20 @@ async def update_appointment(
             if not appointment.assigned_to:
                 appointment.assigned_to = user_id
 
+    if scan_just_enabled:
+        await _notify_scanner_operators(appointment, tenant_id, db)
+        appointment.scan_notified = True
+
     await db.commit()
+
+    if scan_just_enabled:
+        try:
+            job_id = await create_adi_scan_job(appointment)
+            if job_id:
+                appointment.scan_job_id = job_id
+                await db.commit()
+        except Exception:
+            pass
 
     # Re-fetch with relationships
     result = await db.execute(
@@ -235,3 +310,68 @@ async def list_team_members(
         .order_by(User.full_name)
     )
     return result.scalars().all()
+
+
+@router.get("/saved-views")
+async def list_saved_views(
+    tenant_id: uuid.UUID = Depends(get_tenant_id),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Gespeicherte Kalender-Ansichten abrufen (per Tenant-Settings gespeichert)."""
+    from app.models.user import Tenant
+    result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
+    tenant = result.scalar_one_or_none()
+    if not tenant:
+        return []
+    settings = tenant.settings or {}
+    return settings.get("saved_calendar_views", [])
+
+
+@router.post("/saved-views")
+async def save_view(
+    view: dict,
+    tenant_id: uuid.UUID = Depends(get_tenant_id),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Kalender-Ansicht speichern."""
+    from app.models.user import Tenant
+    import time
+    result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
+    tenant = result.scalar_one_or_none()
+    if not tenant:
+        raise HTTPException(status_code=404)
+
+    settings = dict(tenant.settings or {})
+    views = list(settings.get("saved_calendar_views", []))
+    view["id"] = view.get("id") or str(uuid.uuid4())
+    # Upsert by id
+    views = [v for v in views if v.get("id") != view["id"]]
+    views.append(view)
+    settings["saved_calendar_views"] = views
+    tenant.settings = settings
+    await db.commit()
+    return view
+
+
+@router.delete("/saved-views/{view_id}")
+async def delete_saved_view(
+    view_id: str,
+    tenant_id: uuid.UUID = Depends(get_tenant_id),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Gespeicherte Kalender-Ansicht löschen."""
+    from app.models.user import Tenant
+    result = await db.execute(select(Tenant).where(Tenant.id == tenant_id))
+    tenant = result.scalar_one_or_none()
+    if not tenant:
+        raise HTTPException(status_code=404)
+
+    settings = dict(tenant.settings or {})
+    views = [v for v in settings.get("saved_calendar_views", []) if v.get("id") != view_id]
+    settings["saved_calendar_views"] = views
+    tenant.settings = settings
+    await db.commit()
+    return {"ok": True}

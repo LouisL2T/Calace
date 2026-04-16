@@ -24,6 +24,7 @@ class AppointmentCreate(BaseModel):
     priority: AppointmentPriority = AppointmentPriority.MEDIUM
     location_text: str | None = None
     metadata: dict | None = None
+    needs_scan: bool = False
 
 
 class AppointmentUpdate(BaseModel):
@@ -43,6 +44,7 @@ class AppointmentUpdate(BaseModel):
     priority: AppointmentPriority | None = None
     location_text: str | None = None
     metadata: dict | None = None
+    needs_scan: bool | None = None
 
 
 class AppointmentResponse(BaseModel):
@@ -67,6 +69,9 @@ class AppointmentResponse(BaseModel):
     priority: AppointmentPriority
     location_text: str | None
     metadata: dict | None
+    needs_scan: bool = False
+    scan_notified: bool = False
+    scan_job_id: str | None = None
     created_at: datetime
     updated_at: datetime
 

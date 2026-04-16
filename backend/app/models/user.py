@@ -22,6 +22,7 @@ class UserRole(str, enum.Enum):
     ADMIN = "admin"
     EMPLOYEE = "employee"
     VIEWER = "viewer"
+    SCANNER_OPERATOR = "scanner_operator"
 
 
 class Tenant(Base):

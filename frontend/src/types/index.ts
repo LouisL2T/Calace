@@ -42,6 +42,10 @@ export interface Appointment {
   priority: AppointmentPriority;
   location_text: string | null;
   metadata: Record<string, unknown> | null;
+  // Scanner-Operator-Workflow
+  needs_scan: boolean;
+  scan_notified: boolean;
+  scan_job_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -239,3 +243,65 @@ export interface ChatMessage {
 
 // Calendar view types
 export type CalendarView = "day" | "week" | "month" | "year" | "list" | "timeline";
+
+// Notifications
+export interface Notification {
+  id: string;
+  tenant_id: string;
+  user_id: string;
+  appointment_id: string | null;
+  type: string;
+  title: string;
+  body: string | null;
+  is_read: boolean;
+  created_at: string;
+}
+
+// Checklist (Kleine Annahme)
+export interface ChecklistPhoto {
+  id: string;
+  checklist_id: string;
+  photo_type: string;
+  file_url: string;
+  file_name: string | null;
+  mime_type: string | null;
+  uploaded_at: string;
+}
+
+export interface Checklist {
+  id: string;
+  tenant_id: string;
+  appointment_id: string;
+  assigned_to: string | null;
+  status: "pending" | "in_progress" | "completed";
+  mileage: number | null;
+  fault_codes: string | null;
+  notes: string | null;
+  created_at: string;
+  completed_at: string | null;
+  photos: ChecklistPhoto[];
+}
+
+// Color Rules
+export interface ColorRule {
+  id: string;
+  tenant_id: string;
+  label: string;
+  color: string;
+  rule_type: "employee" | "order_type" | "customer";
+  reference_id: string | null;
+  created_at: string;
+}
+
+// Saved Calendar Views
+export interface SavedView {
+  id?: string;
+  name: string;
+  assigned_to?: string;
+  customer_id?: string;
+  status?: string;
+  needs_scan?: boolean;
+  view_type?: CalendarView;
+  icon?: string;
+}
+

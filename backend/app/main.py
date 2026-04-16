@@ -6,11 +6,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
-from app.api.routes import auth, calendar, crm, ai, communication, business, modules, orders
+from app.api.routes import auth, calendar, crm, ai, communication, business, modules, orders, notifications, checklist, color_rules
 from app.core.config import settings
 from app.db.session import engine
 from app.db.base import Base
 from app.models import user as user_models, crm as crm_models, calendar as calendar_models, ai as ai_models, communication as communication_models, business as business_models, modules as modules_models
+from app.models import notification as notification_models, checklist as checklist_models, color_rule as color_rule_models
 
 from contextlib import asynccontextmanager
 
@@ -77,6 +78,9 @@ app.include_router(communication.router, prefix="/api/v1")
 app.include_router(business.router, prefix="/api/v1")
 app.include_router(modules.router, prefix="/api/v1")
 app.include_router(orders.router, prefix="/api/v1")
+app.include_router(notifications.router, prefix="/api/v1")
+app.include_router(checklist.router, prefix="/api/v1")
+app.include_router(color_rules.router, prefix="/api/v1")
 
 
 @app.get("/health")

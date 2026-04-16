@@ -9,7 +9,8 @@ import {
   CreateAppointmentModal, FilterBar,
   MONTHS_DE, formatDateDE, getWeekDays, getViewRange,
 } from "@/components/calendar";
-import { Plus, ChevronLeft, ChevronRight, Calendar, List, Clock, LayoutGrid, Columns } from "lucide-react";
+import ViewSelector from "@/components/calendar/ViewSelector";
+import { Plus, ChevronLeft, ChevronRight, Calendar, List, Clock, LayoutGrid, Columns, PanelLeftOpen, PanelLeftClose } from "lucide-react";
 import { useState } from "react";
 
 const VIEW_CONFIG: { key: CalendarView; label: string; icon: React.ReactNode }[] = [
@@ -29,6 +30,10 @@ export default function CalendarPage() {
   } = useCalendarStore();
 
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showViewSelector, setShowViewSelector] = useState(true);
+  const [viewFilters, setViewFilters] = useState<{
+    assigned_to?: string; customer_id?: string; needs_scan?: boolean;
+  }>({});
 
   // Load appointments for the current view range
   const loadAppointments = useCallback(async () => {
@@ -38,6 +43,9 @@ export default function CalendarPage() {
       const data = await calendarAPI.list({
         start: start.toISOString(),
         end: end.toISOString(),
+        assigned_to: viewFilters.assigned_to,
+        customer_id: viewFilters.customer_id,
+        needs_scan: viewFilters.needs_scan,
       });
       setAppointments(data);
     } catch {
@@ -45,7 +53,7 @@ export default function CalendarPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentDate, currentView, setAppointments, setIsLoading]);
+  }, [currentDate, currentView, viewFilters, setAppointments, setIsLoading]);
 
   // Load team members once
   useEffect(() => {
@@ -89,12 +97,35 @@ export default function CalendarPage() {
   const appointments = getFilteredAppointments();
 
   return (
-    <div>
+    <div className="flex gap-0 -mx-6 -mt-6">
+      {/* ViewSelector Sidebar */}
+      {showViewSelector && (
+        <ViewSelector
+          teamMembers={teamMembers}
+          currentFilters={viewFilters}
+          onSelectView={(f) => {
+            setViewFilters(f);
+          }}
+        />
+      )}
+
+      <div className="flex-1 min-w-0 p-6">
       {/* ─── Header ────────────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4 gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Einsatzplanung</h1>
-          <p className="text-sm text-gray-500">{headerTitle}</p>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowViewSelector(!showViewSelector)}
+            className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
+            title={showViewSelector ? "Ansichts-Panel schließen" : "Ansichts-Panel öffnen"}
+          >
+            {showViewSelector
+              ? <PanelLeftClose size={18} />
+              : <PanelLeftOpen size={18} />}
+          </button>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Einsatzplanung</h1>
+            <p className="text-sm text-gray-500">{headerTitle}</p>
+          </div>
         </div>
         <div className="flex flex-col items-end gap-2 w-full sm:w-auto">
           {/* Top row: Navigate and Create */}
@@ -183,6 +214,7 @@ export default function CalendarPage() {
           onCreated={() => { setShowCreateModal(false); loadAppointments(); }}
         />
       )}
+      </div>
     </div>
   );
 }

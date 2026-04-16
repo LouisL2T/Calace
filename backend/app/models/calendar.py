@@ -2,7 +2,7 @@ import uuid
 from datetime import datetime, timezone
 import enum
 
-from sqlalchemy import String, Boolean, ForeignKey, DateTime, Integer, Text, Enum as SAEnum
+from sqlalchemy import String, Boolean, ForeignKey, DateTime, Integer, Text, Enum as SAEnum, JSON as SAJSON
 from sqlalchemy import JSON, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -71,6 +71,11 @@ class Appointment(Base):
     color: Mapped[str | None] = mapped_column(String(7), nullable=True)
     # Free-text location (e.g. "Parkplatz Halle 3") distinct from structured Location relation
     location_text: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
+    # Scanner-Operator workflow
+    needs_scan: Mapped[bool] = mapped_column(Boolean, default=False)
+    scan_notified: Mapped[bool] = mapped_column(Boolean, default=False)
+    scan_job_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     # Flexible extra data per industry (e.g. vehicle info, damage photos)
     meta_data: Mapped[dict | None] = mapped_column("metadata", JSON, nullable=True)

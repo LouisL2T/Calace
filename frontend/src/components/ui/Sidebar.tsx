@@ -15,6 +15,8 @@ import {
   ChevronRight,
   LogOut,
   ClipboardList,
+  Palette,
+  Scan,
 } from "lucide-react";
 
 const ICON_MAP: Record<string, React.ReactNode> = {
@@ -26,6 +28,8 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   materials: <Package size={20} />,
   vehicles: <Users size={20} />,
   puzzle: <Puzzle size={20} />,
+  colors: <Palette size={20} />,
+  scan: <Scan size={20} />,
 };
 
 const BUILTIN_NAV = [
@@ -35,6 +39,7 @@ const BUILTIN_NAV = [
   { slug: "time_tracking", name: "Zeiterfassung", href: "/timetracking", icon: "time_tracking" },
   { slug: "invoicing", name: "Rechnungen", href: "/invoicing", icon: "invoicing" },
   { slug: "materials", name: "Material", href: "/materials", icon: "materials" },
+  { slug: "colors", name: "Farbregeln", href: "/settings/colors", icon: "colors" },
 ];
 
 export default function Sidebar() {
