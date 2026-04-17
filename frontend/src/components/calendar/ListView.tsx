@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import type { Appointment, AppointmentStatus, AppointmentPriority } from "@/types";
 import { STATUS_LABELS, PRIO_LABELS } from "./helpers";
-import { ArrowUpDown, Search, MapPin, User } from "lucide-react";
+import { ArrowUpDown, Search, MapPin, User, Car } from "lucide-react";
 
 type SortKey = "title" | "start_time" | "status" | "priority" | "location_text";
 type SortDir = "asc" | "desc";
@@ -87,7 +87,10 @@ export default function ListView({ appointments }: { appointments: Appointment[]
             {filtered.map(apt => (
               <tr key={apt.id} className="hover:bg-surface-50/50 transition-colors cursor-pointer">
                 <td className="px-4 py-3">
-                  <div className="text-sm font-medium text-gray-900">{apt.title}</div>
+                  <div className="flex items-center gap-2 text-sm font-medium text-gray-900">
+                    {apt.title}
+                    {apt.rental_car_needed && <Car size={14} className="text-purple-600" title="Mietwagen gebucht" />}
+                  </div>
                   {apt.order_number && <div className="text-xs text-gray-400">{apt.order_number}</div>}
                 </td>
                 <td className="px-4 py-3">

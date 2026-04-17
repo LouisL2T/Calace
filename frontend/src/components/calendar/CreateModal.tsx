@@ -4,9 +4,10 @@ import { useState, useEffect, useRef } from "react";
 import { calendarAPI, crmAPI } from "@/services/api";
 import type { Customer, Location, ContactPerson, Vehicle, TeamMember, AppointmentStatus, AppointmentPriority } from "@/types";
 import { STATUS_LABELS, PRIO_LABELS, STATUS_COLORS, PRIO_COLORS } from "./helpers";
-import { X, Scan, ChevronDown, MapPin, Phone } from "lucide-react";
+import { X, Scan, ChevronDown, MapPin, Phone, Car } from "lucide-react";
 import ColorPicker from "@/components/ui/ColorPicker";
 import CustomerSearch from "@/components/ui/CustomerSearch";
+import { useFleetStore } from "@/store/useFleetStore";
 
 interface CreateModalProps {
   date: Date;
@@ -26,6 +27,13 @@ export default function CreateAppointmentModal({ date, teamMembers, onClose, onC
 
   // Scanner-Workflow
   const [needsScan, setNeedsScan] = useState(false);
+
+  // Rental Car Workflow
+  const { cars: rentalCars, fetchCars } = useFleetStore();
+  const [rentalCarNeeded, setRentalCarNeeded] = useState(false);
+  const [selectedRentalCarId, setSelectedRentalCarId] = useState("");
+
+  useEffect(() => { fetchCars(); }, [fetchCars]);
 
   // Timing
   const startDateRef = useRef<HTMLInputElement>(null);
@@ -146,9 +154,15 @@ export default function CreateAppointmentModal({ date, teamMembers, onClose, onC
         end_time: ed.toISOString(),
         is_multi_day: isMultiDay,
         assigned_to_ids: selectedAssigneeIds,
+        rental_car_needed: rentalCarNeeded,
+        rental_car_id: selectedRentalCarId || undefined,
       });
       onCreated();
-    } catch { /* handle */ } finally { setLoading(false); }
+    } catch (err: any) {
+      if (err.response?.status === 409) {
+        alert(err.response.data.detail || "Dieser Mietwagen ist im gewählten Zeitraum bereits gebucht.");
+      }
+    } finally { setLoading(false); }
   };
 
   const inp = "w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-300 text-sm bg-white";
@@ -255,6 +269,65 @@ export default function CreateAppointmentModal({ date, teamMembers, onClose, onC
                 <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${needsScan ? "translate-x-5" : ""}`} />
               </div>
             </div>
+          </div>
+
+          {/* Mietwagen-Toggle */}
+          <div className="border-t border-gray-100 pt-4">
+            <div
+              className={`flex items-center justify-between p-3 rounded-xl border-2 cursor-pointer transition-all ${
+                rentalCarNeeded
+                  ? "border-purple-400 bg-purple-50"
+                  : "border-gray-200 bg-gray-50 hover:border-gray-300"
+              }`}
+              onClick={() => {
+                setRentalCarNeeded(!rentalCarNeeded);
+                if (rentalCarNeeded) setSelectedRentalCarId(""); // reset when disabling
+              }}
+            >
+              <div className="flex items-center gap-3">
+                <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${
+                  rentalCarNeeded ? "bg-purple-100" : "bg-gray-200"
+                }`}>
+                  <Car size={18} className={rentalCarNeeded ? "text-purple-600" : "text-gray-400"} />
+                </div>
+                <div>
+                  <p className={`text-sm font-semibold ${rentalCarNeeded ? "text-purple-800" : "text-gray-700"}`}>
+                    Mietwagen benötigt
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    {rentalCarNeeded
+                      ? "Flotten-Verfügbarkeit wird geprüft"
+                      : "Kein Mietwagen erforderlich"
+                    }
+                  </p>
+                </div>
+              </div>
+              <div
+                className={`relative w-11 h-6 rounded-full transition-colors ${rentalCarNeeded ? "bg-purple-500" : "bg-gray-300"}`}
+              >
+                <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${rentalCarNeeded ? "translate-x-5" : ""}`} />
+              </div>
+            </div>
+
+            {/* Dropdown if requested */}
+            {rentalCarNeeded && (
+              <div className="mt-3">
+                <label className={lbl}>Mietwagen auswählen</label>
+                <select
+                  value={selectedRentalCarId}
+                  onChange={(e) => setSelectedRentalCarId(e.target.value)}
+                  className={inp}
+                >
+                  <option value="">— Bitte Mietwagen auswählen —</option>
+                  {rentalCars.map((car) => (
+                    <option key={car.id} value={car.id} disabled={car.status !== "available" && car.status !== "in_use"}>
+                      {car.name} ({car.license_plate}) - {car.status === "available" ? "Verfügbar" : car.status === "in_use" ? "Anderweitig im Einsatz prüfen" : "In Wartung / Nicht verfügbar"}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[10px] text-gray-400 mt-1">Die exakte Verfügbarkeit im Zeitraum wird beim Speichern verifiziert.</p>
+              </div>
+            )}
           </div>
 
           {/* Timing */}

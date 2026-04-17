@@ -143,6 +143,19 @@ async def create_appointment(
         if start_date != end_date:
             dump["is_multi_day"] = True
 
+    # Check rental car availability
+    if data.rental_car_needed and data.rental_car_id and dump.get("start_time") and dump.get("end_time"):
+        overlap_query = select(Appointment).where(
+            Appointment.rental_car_id == data.rental_car_id,
+            Appointment.tenant_id == tenant_id,
+            Appointment.end_time > dump["start_time"],
+            Appointment.start_time < dump["end_time"],
+            Appointment.status != AppointmentStatus.CANCELLED
+        )
+        overlap = await db.execute(overlap_query)
+        if overlap.scalars().first():
+            raise HTTPException(status_code=409, detail="Mietwagen im gewählten Zeitraum bereits gebucht.")
+
     appointment = Appointment(tenant_id=tenant_id, **dump)
     db.add(appointment)
     await db.flush()  # Get the appointment ID
@@ -216,6 +229,20 @@ async def update_appointment(
     if appointment.start_time and appointment.end_time:
         appointment.is_multi_day = appointment.start_time.date() != appointment.end_time.date()
 
+    # Check rental car availability
+    if appointment.rental_car_needed and appointment.rental_car_id and appointment.start_time and appointment.end_time:
+        overlap_query = select(Appointment).where(
+            Appointment.rental_car_id == appointment.rental_car_id,
+            Appointment.tenant_id == tenant_id,
+            Appointment.id != appointment.id,
+            Appointment.end_time > appointment.start_time,
+            Appointment.start_time < appointment.end_time,
+            Appointment.status != AppointmentStatus.CANCELLED
+        )
+        overlap = await db.execute(overlap_query)
+        if overlap.scalars().first():
+            raise HTTPException(status_code=409, detail="Mietwagen im gewählten Zeitraum bereits gebucht.")
+
     # Update M2M assignees if provided
     if data.assigned_to_ids is not None:
         # Remove old assignees
@@ -270,6 +297,20 @@ async def drag_drop_appointment(
     appointment = result.scalar_one_or_none()
     if not appointment:
         raise HTTPException(status_code=404)
+
+    # Check rental car availability
+    if appointment.rental_car_needed and appointment.rental_car_id:
+        overlap_query = select(Appointment).where(
+            Appointment.rental_car_id == appointment.rental_car_id,
+            Appointment.tenant_id == tenant_id,
+            Appointment.id != appointment.id,
+            Appointment.end_time > data.start_time,
+            Appointment.start_time < data.end_time,
+            Appointment.status != AppointmentStatus.CANCELLED
+        )
+        overlap = await db.execute(overlap_query)
+        if overlap.scalars().first():
+            raise HTTPException(status_code=409, detail="Mietwagen im gewählten Zeitraum bereits gebucht.")
 
     appointment.start_time = data.start_time
     appointment.end_time = data.end_time

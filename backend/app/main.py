@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from sqlalchemy import text
 
-from app.api.routes import auth, calendar, crm, ai, communication, business, modules, orders, notifications, checklist, color_rules
+from app.api.routes import auth, calendar, crm, ai, communication, business, modules, orders, notifications, checklist, color_rules, fleet
 from app.core.config import settings
 from app.db.session import engine
 from app.db.base import Base
@@ -81,6 +81,7 @@ app.include_router(orders.router, prefix="/api/v1")
 app.include_router(notifications.router, prefix="/api/v1")
 app.include_router(checklist.router, prefix="/api/v1")
 app.include_router(color_rules.router, prefix="/api/v1")
+app.include_router(fleet.router, prefix="/api/v1")
 
 
 @app.get("/health")

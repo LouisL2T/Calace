@@ -15,6 +15,8 @@ class AppointmentCreate(BaseModel):
     vehicle_id: UUID | None = None
     location_id: UUID | None = None
     contact_person_id: UUID | None = None
+    rental_car_id: UUID | None = None
+    rental_car_needed: bool = False
     start_time: datetime
     end_time: datetime
     is_multi_day: bool = False
@@ -35,6 +37,8 @@ class AppointmentUpdate(BaseModel):
     vehicle_id: UUID | None = None
     location_id: UUID | None = None
     contact_person_id: UUID | None = None
+    rental_car_id: UUID | None = None
+    rental_car_needed: bool | None = None
     start_time: datetime | None = None
     end_time: datetime | None = None
     is_multi_day: bool | None = None
@@ -60,6 +64,8 @@ class AppointmentResponse(BaseModel):
     vehicle_id: UUID | None
     location_id: UUID | None
     contact_person_id: UUID | None
+    rental_car_id: UUID | None
+    rental_car_needed: bool
     start_time: datetime
     end_time: datetime
     is_multi_day: bool

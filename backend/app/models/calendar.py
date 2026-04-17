@@ -56,6 +56,8 @@ class Appointment(Base):
     vehicle_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("vehicles.id"), nullable=True)
     location_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("locations.id"), nullable=True)
     contact_person_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("contact_persons.id"), nullable=True)
+    rental_car_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("rental_cars.id"), nullable=True)
+    rental_car_needed: Mapped[bool] = mapped_column(Boolean, default=False)
 
     title: Mapped[str] = mapped_column(String(255))
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -90,6 +92,7 @@ class Appointment(Base):
     location = relationship("Location", back_populates="appointments")
     contact_person = relationship("ContactPerson", back_populates="appointments")
     assignees = relationship("AppointmentAssignee", back_populates="appointment", cascade="all, delete-orphan")
+    rental_car = relationship("RentalCar", back_populates="appointments")
 
 
 class AppointmentRecurrence(Base):

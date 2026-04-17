@@ -8,6 +8,7 @@ from app.models.ai import AIConversation, AIMessage, EmbeddingStore
 from app.models.notification import Notification
 from app.models.checklist import Checklist, ChecklistPhoto
 from app.models.color_rule import ColorRule
+from app.models.fleet import RentalCar, RentalCarStatus, RentalCarTransmission
 
 __all__ = [
     "User", "Tenant", "TenantMember",
@@ -20,4 +21,5 @@ __all__ = [
     "Notification",
     "Checklist", "ChecklistPhoto",
     "ColorRule",
+    "RentalCar", "RentalCarStatus", "RentalCarTransmission"
 ]

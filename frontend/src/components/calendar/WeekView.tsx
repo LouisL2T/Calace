@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import type { Appointment } from "@/types";
 import { HOURS, HOUR_HEIGHT, DAYS_SHORT, isSameDay, getWeekDays, getAppointmentColor, getTimePos } from "./helpers";
-import { Calendar as CalendarIcon } from "lucide-react";
+import { Calendar as CalendarIcon, Car } from "lucide-react";
 
 export default function WeekView({ date, appointments }: { date: Date; appointments: Appointment[] }) {
   const weekDays = useMemo(() => getWeekDays(date), [date]);
@@ -57,6 +57,7 @@ export default function WeekView({ date, appointments }: { date: Date; appointme
                   style={{ left: `${startCol * colW}%`, width: `${span * colW}%`, top: idx * 28, backgroundColor: getAppointmentColor(apt) }}>
                   <span className={`prio-dot prio-dot-${apt.priority}`} />
                   {apt.title}
+                  {apt.rental_car_needed && <Car size={10} className="text-white/80" />}
                 </div>
               );
             })}
@@ -90,6 +91,7 @@ export default function WeekView({ date, appointments }: { date: Date; appointme
                     <div className="flex items-center gap-1">
                       <span className={`prio-dot prio-dot-${apt.priority}`} />
                       <p className="text-white text-xs font-medium truncate">{apt.title}</p>
+                      {apt.rental_car_needed && <Car size={10} className="text-white/80 shrink-0" />}
                     </div>
                     <p className="text-white/70 text-[10px]">
                       {new Date(apt.start_time).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}

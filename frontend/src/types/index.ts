@@ -33,6 +33,8 @@ export interface Appointment {
   vehicle_id: string | null;
   location_id: string | null;
   contact_person_id: string | null;
+  rental_car_id: string | null;
+  rental_car_needed: boolean;
   start_time: string;
   end_time: string;
   is_multi_day: boolean;
@@ -303,5 +305,24 @@ export interface SavedView {
   needs_scan?: boolean;
   view_type?: CalendarView;
   icon?: string;
+}
+
+// Fleet Management
+export type RentalCarStatus = "available" | "in_use" | "maintenance" | "retired";
+export type  RentalCarTransmission = "manuell" | "automatik";
+
+export interface RentalCar {
+  id: string;
+  tenant_id: string;
+  name: string;
+  make: string | null;
+  model: string | null;
+  license_plate: string | null;
+  vehicle_class: string | null;
+  doors: number | null;
+  transmission: RentalCarTransmission | null;
+  status: RentalCarStatus;
+  notes: string | null;
+  created_at: string;
 }
 
